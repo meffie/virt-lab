@@ -1,0 +1,375 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2019 Sine Nomine Associates
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# THE SOFTWARE IS PROVIDED 'AS IS' AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+from __future__ import print_function
+
+import argparse
+import os
+import re
+import sys
+
+try:
+    # python3
+    from configparser import ConfigParser
+    from configparser import NoSectionError
+    from configparser import NoOptionError
+except ImportError:
+    # python2
+    from ConfigParser import SafeConfigParser as ConfigParser
+    from ConfigParser import NoSectionError
+    from ConfigParser import NoOptionError
+
+verbose = False
+dryrun = False
+
+VERSION = '1.0'
+DESC  = 'Install and remove sets of guests on a local hypervisor using cloud-init images.'
+USAGE = '''\
+virt-lab <command> [<args>]
+
+Commands:
+  create     create a set of guests
+  destroy    destroy a set of guests
+  list       list guest sets
+  help       show help
+  version    show version'''
+DEFAULTS = {
+    'desc': '',
+    'key': '~/.ssh/id_rsa.pub',
+    'domain': 'example.com',
+    'bridge': 'virbr0',
+    'gateway': '192.168.122.1',
+    'images': '3',
+    'distro': 'centos7',
+    'namefmt': '{lab}{guest:02d}',
+    'vmdir': '~/virt/vms',
+    'vardir': '~/virt/var',
+}
+PATHNAMES = ('key', 'vmdir', 'vardir')
+
+def trace(msg):
+    sys.stdout.write('[trace]: %s\n' % msg)
+
+def info(msg):
+    sys.stdout.write('[info]: %s\n' % msg)
+
+def warn(msg):
+    sys.stdout.write('[warn]: %s\n' % msg)
+
+def error(msg):
+    sys.stderr.write('[error]: %s\n' % msg)
+
+def die(msg):
+    sys.stderr.write('[fatal]: %s\n' % msg)
+    sys.exit(1)
+
+def run(args):
+    cmdline = ' '.join(args)
+    if dryrun:
+        info('dryrun: %s' % cmdline)
+        return 0
+    if verbose:
+        trace('running: %s' % cmdline)
+    rc = os.system(cmdline)
+    if verbose:
+        trace('%s: rc=%d' % (args[0], rc))
+    return rc
+
+def mkdirp(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+class VirtLabValues:
+
+    def __init__(self, args):
+        self.name = args.name
+        self.values = {'lab': args.name}
+        self.args = args
+        self.config = None
+
+    def guests(self):
+        namefmt = self.get('namefmt')
+        for i,image in enumerate(self.get_images()):
+            name = namefmt.format(lab=self.name, guest=i)
+            yield VirtLabGuest(name, image, self)
+
+    def __getattr__(self, name):
+        return self.get(name)
+
+    def get(self, name):
+        if not name in self.values:
+            self.values[name] = self.get_value(name)
+        return self.values[name]
+
+    def get_value(self, name):
+        value = self.get_arg_value(name)
+        if value is None:
+            value = self.get_cfg_value(name)
+        if value is None:
+            value = DEFAULTS.get(name, None)
+        if name in PATHNAMES and value is not None:
+            value = os.path.expanduser(value)
+        return value
+
+    def get_arg_value(self, name):
+        return getattr(self.args, name, None)
+
+    def get_cfg_value(self, name):
+        value = None
+        if self.config is None:
+            self.config = ConfigParser()
+            with open(self.args.config) as f:
+                self.config.readfp(f)
+        try:
+            value = self.config.get(self.name, name)
+        except NoSectionError:
+            pass
+        except NoOptionError:
+            pass
+        return value
+
+    def get_images(self):
+        images = self.get('images')
+        if hasattr(images, 'split'):
+            images = images.split()
+        for image in images:
+            number,distro = self.parse_image_string(image)
+            for i in range(number):
+                yield distro
+
+    def parse_image_string(self, image):
+        image = image.strip()
+        m = re.search('^(\d+):(\w+)$', image)
+        if m:
+            number = int(m.group(1))
+            distro = m.group(2)
+            return number, distro
+        m = re.search('^(\d+)$', image)
+        if m:
+            number = int(m.group(1))
+            distro = self.get('distro')
+            return number, distro
+        m = re.search('^(\w+)$', image)
+        if m:
+            number = 1
+            distro = m.group(1)
+            return number, distro
+        die('Unable to parse image string: "%s"' % image)
+
+
+class VirtLabGuest:
+
+    def __init__(self, name, image, lab):
+        self.lab = lab
+        self.name = name
+        self.image = image
+
+    def __getattr__(self, name):
+        value = None
+        if name == 'mac':
+            value = self.get_mac()
+            self.mac = value
+        else:
+            value = self.lab.get(name)
+        return value
+
+    def get_mac(self):
+        if self.domain_exists():
+            mac = self.domain_mac_addr()
+        else:
+            mac = self.read_var('mac')
+        return mac
+
+    def create(self):
+        if self.domain_exists():
+            warn('Skipping %s: domain already exists.' % self.name)
+            return
+        args = [
+            'kvm-install-vm',
+            'create',
+            '-a',
+            '-b', self.bridge,
+            '-D', self.domain,
+            '-k', self.key,
+            '-t', self.distro,
+        ]
+        if self.mac:
+            args.extend(['-M', self.mac])
+        args.append(self.name)
+        info('creating guest %s with image %s' % (self.name, self.distro))
+        rc = run(args)
+        if rc != 0:
+            die('Failed to create guest %s' % (self.name))
+        self.write_var('mac', self.domain_mac_addr())
+
+    def destroy(self, purge):
+        info('destroying guest %s' % self.name)
+        run(['kvm-install-vm', 'remove', self.name])
+        if purge:
+            self.remove_var('mac')
+            self.remove_vardir()
+
+    def domain_exists(self):
+        """Return True if domain exists."""
+        rc = os.system('virsh dominfo %s >/dev/null 2>/dev/null' % (self.name))
+        return rc == 0
+
+    def domain_mac_addr(self):
+        """Return the first mac address in the domain definition, if one."""
+        xml = os.path.join(self.vmdir, self.name, self.name + '.xml')
+        rc = os.system('virsh dumpxml %s >%s' % (self.name, xml))
+        if rc == 0:
+            with open(xml) as f:
+                for line in f.readlines():
+                    m = re.search(r"<mac address='([0-9a-fA-F:]+)'/>", line)
+                    if m:
+                        mac = m.group(1)
+                        return mac
+        return None
+
+    def read_var(self, name):
+        value = None
+        try:
+            path = os.path.join(self.vardir, self.name, name)
+            with open(path) as f:
+                value = f.read().strip()
+        except Exception as e:
+            pass
+        return value
+
+    def write_var(self, name, value):
+        if value is None:
+            return
+        path = os.path.join(self.vardir, self.name, name)
+        mkdirp(os.path.dirname(path))
+        with open(path, 'w') as f:
+            f.write('%s\n' % value)
+
+    def remove_var(self, name):
+        path = os.path.join(self.vardir, self.name, name)
+        try:
+            os.unlink(path)
+        except:
+            pass
+
+    def remove_vardir(self):
+        path = os.path.join(self.vardir, self.name)
+        try:
+            os.rmdir(path)
+        except:
+            pass
+
+class VirtLab:
+
+    def __init__(self):
+        self.command = ''
+        self.args = argparse.Namespace(
+            verbose=False,
+            dryrun=False,
+            purge=False,
+            config='virt-lab.cfg')
+
+    def _progname(self):
+        """Subcommand program name."""
+        return "%s %s" % (os.path.basename(sys.argv[0]), self.command)
+
+    def _parse_args(self, parser):
+        """Parse subcommand arguments."""
+        self.args = parser.parse_args(sys.argv[2:], self.args)
+        global verbose
+        global dryrun
+        verbose = self.args.verbose
+        dryrun = self.args.dryrun
+
+    def _unknown(self):
+        die('Unknown command: %s' % (self.command))
+
+    def help(self):
+        """Print usage string."""
+        print('usage:', USAGE)
+        print(DESC)
+
+    def version(self):
+        """Print version string."""
+        print(VERSION)
+
+    def create(self):
+        """Create the virtual lab guests."""
+        parser = argparse.ArgumentParser(
+            prog=self._progname(),
+            description=self.create.__doc__)
+        parser.add_argument('-v', '--verbose', action='store_true')
+        parser.add_argument('-n', '--dryrun', action='store_true')
+        parser.add_argument('-c', '--config')
+        parser.add_argument('name')
+        self._parse_args(parser)
+
+        lab = VirtLabValues(self.args)
+        for guest in lab.guests():
+            guest.create()
+
+        run(['systemd-resolve',
+             '--interface', lab.bridge,
+             '--set-dns', lab.gateway,
+             '--set-domain', lab.domain])
+
+    def destroy(self):
+        """Destroy the virtual lab guests."""
+        parser = argparse.ArgumentParser(
+            prog=self._progname(),
+            description=self.destroy.__doc__)
+        parser.add_argument('-v', '--verbose', action='store_true')
+        parser.add_argument('-n', '--dryrun', action='store_true')
+        parser.add_argument('-c', '--config')
+        parser.add_argument('--purge', action='store_true')
+        parser.add_argument('name')
+        self._parse_args(parser)
+
+        lab = VirtLabValues(self.args)
+        for guest in lab.guests():
+            guest.destroy(self.args.purge)
+
+    def list(self):
+        """List virtual labs."""
+        parser = argparse.ArgumentParser(
+            prog=self._progname(),
+            description=self.list.__doc__)
+        self._parse_args(parser)
+        die('todo')
+
+    def main(self):
+        """Main return for virt-lab"""
+        parser = argparse.ArgumentParser(
+            prog=self._progname(),
+            description=DESC,
+            usage=USAGE)
+        parser.add_argument('command', help='subcommand to run')
+        args = parser.parse_args(sys.argv[1:2], self.args)
+        self.command = args.command
+        if self.command.startswith('_'):
+            self.command = '_unknown'
+        getattr(self, self.command, self._unknown)()
+
+if __name__ == '__main__':
+    VirtLab().main()
