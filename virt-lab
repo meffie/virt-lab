@@ -315,7 +315,7 @@ class VirtLab:
             verbose=False,
             dryrun=False,
             purge=False,
-            config='virt-lab.cfg')
+            config=os.path.expanduser('~/virt-lab.cfg'))
 
     def _progname(self):
         """Subcommand program name."""
