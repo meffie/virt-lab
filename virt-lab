@@ -96,9 +96,9 @@ def run(args):
     else:
         cmdline = "%s" % args
     if dryrun:
-        info('skipping: %s' % cmdline)
+        trace('skipping: %s' % cmdline)
         return 0
-    info('running: %s' % cmdline)
+    trace('running: %s' % cmdline)
     rc = os.system(cmdline)
     return rc
 
@@ -122,7 +122,7 @@ class VirtLabValues:
 
     def guests(self):
         for i,image in enumerate(self.get_images()):
-            name = self.namefmt.format(lab=self.name, guest=i)
+            name = self.namefmt.format(lab=self.name, guest=(i+1))
             yield VirtLabGuest(name, image, self)
 
     def __getattr__(self, name):
