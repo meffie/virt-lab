@@ -113,9 +113,9 @@ class VirtLabFormatter(string.Formatter):
 
 class VirtLabValues:
 
-    def __init__(self, args):
-        self.name = args.name
-        self.lab = args.name # alias
+    def __init__(self, name, args):
+        self.name = name
+        self.lab = name # alias
         self.values = {}
         self.args = args
         self.config = None
@@ -354,7 +354,7 @@ class VirtLab:
         parser.add_argument('name')
         self._parse_args(parser)
 
-        lab = VirtLabValues(self.args)
+        lab = VirtLabValues(self.args.name, self.args)
         for guest in lab.guests():
             guest.create()
         if lab.postcreate:
@@ -375,14 +375,13 @@ class VirtLab:
         parser.add_argument('name')
         self._parse_args(parser)
 
-        lab = VirtLabValues(self.args)
+        lab = VirtLabValues(self.args.name, self.args)
         for guest in lab.guests():
             guest.destroy(self.args.purge)
         if lab.postdestroy:
             rc = run(lab.postdestroy)
             if rc != 0:
                 die('post-destroy command failed: %s; rc=%d' % (lab.postdestroy, rc))
-
 
     def list(self):
         """List virtual labs."""
@@ -400,20 +399,28 @@ class VirtLab:
         except IOError as e:
             die('Unable to read config file %s.\n%s' % (self.args.config, e))
 
-        for lab in config.sections():
-            try:
-                desc = config.get(lab, 'desc')
-            except NoOptionError:
-                desc = ''
+        if not self.args.brief:
+            tmpfile = '/tmp/virt-lab-list'
+            rc = os.system('virsh list --name --all >%s' % tmpfile)
+            if rc != 0:
+                die('Unable to run virsh list.')
+            with open(tmpfile) as f:
+                names = set(f.read().split())
+
+        for section in config.sections():
             if self.args.brief:
-                print(lab)
+                print(section)
             else:
-                print('Name: %s' % lab)
-                if desc:
-                    print('Desc: %s' % desc)
-                print('Running guests:')
-                os.system('virsh list --name --state-running | grep "^%s"' % lab)
+                lab = VirtLabValues(section, self.args)
+                desc = lab.desc if lab.desc else ''
+                guests = [g.name for g in lab.guests()]
+                created = 'yes' if names & set(guests) else 'no'
+                print('Name:', lab.name)
+                print('Desc:', desc)
+                print('Guests:', ' '.join(guests))
+                print('Created:', created)
                 print()
+
 
     def main(self):
         """Main return for virt-lab"""
