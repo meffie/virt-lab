@@ -52,9 +52,9 @@ Commands:
   destroy    destroy a set of guests
   list       list guest sets
   help       show help
-  version    show version'''
+  version    show version
+'''
 DEFAULTS = {
-    'desc': '',
     'key': '~/.ssh/id_rsa.pub',
     'domain': 'example.com',
     'bridge': 'virbr0',
@@ -139,12 +139,15 @@ class VirtLabValues:
         value = None
         if self.config is None:
             self.config = ConfigParser()
-            with open(self.args.config) as f:
-                self.config.readfp(f)
+            try:
+                with open(self.args.config) as f:
+                    self.config.readfp(f)
+            except IOError as e:
+                die('Unable to read config file %s.\n%s' % (self.args.config, e))
         try:
             value = self.config.get(self.name, name)
         except NoSectionError:
-            pass
+            die('Lab name not found in config file %s' % (self.args.config))
         except NoOptionError:
             pass
         return value
@@ -355,8 +358,31 @@ class VirtLab:
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.list.__doc__)
+        parser.add_argument('-c', '--config')
+        parser.add_argument('-b', '--brief', action='store_true')
         self._parse_args(parser)
-        die('todo')
+
+        config = ConfigParser()
+        try:
+            with open(self.args.config) as f:
+                config.readfp(f)
+        except IOError as e:
+            die('Unable to read config file %s.\n%s' % (self.args.config, e))
+
+        for lab in config.sections():
+            try:
+                desc = config.get(lab, 'desc')
+            except NoOptionError:
+                desc = ''
+            if self.args.brief:
+                print(lab)
+            else:
+                print('Name: %s' % lab)
+                if desc:
+                    print('Desc: %s' % desc)
+                print('Running guests:')
+                os.system('virsh list --name --state-running | grep "^%s"' % lab)
+                print()
 
     def main(self):
         """Main return for virt-lab"""
@@ -370,6 +396,7 @@ class VirtLab:
         if self.command.startswith('_'):
             self.command = '_unknown'
         getattr(self, self.command, self._unknown)()
+
 
 if __name__ == '__main__':
     VirtLab().main()
