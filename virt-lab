@@ -215,12 +215,12 @@ class VirtLabGuest:
             '-b', self.bridge,
             '-D', self.domain,
             '-k', self.key,
-            '-t', self.distro,
+            '-t', self.image,
         ]
         if self.mac:
             args.extend(['-M', self.mac])
         args.append(self.name)
-        info('creating guest %s with image %s' % (self.name, self.distro))
+        info('creating guest %s with image %s' % (self.name, self.image))
         rc = run(args)
         if rc != 0:
             die('Failed to create guest %s' % (self.name))
