@@ -46,14 +46,16 @@ dryrun = False
 VERSION = '1.0'
 DESC  = 'Install and remove sets of guests on a local hypervisor using cloud-init images.'
 USAGE = '''\
-virt-lab <command> [<args>]
+virt-lab [<options>] <command> [<name>]
 
 Commands:
-  create     create a set of guests
-  destroy    destroy a set of guests
-  list       list guest sets
-  help       show help
-  version    show version
+  create <name>     create a set of guests
+  destroy <name>    destroy a set of guests
+  start <name>      start a set of guests
+  stop <name>       shutdown a set of guests
+  list              list guest sets
+  help              show help
+  version           show version
 '''
 DEFAULTS = {
     'key': '~/.ssh/id_rsa.pub',
@@ -227,6 +229,7 @@ class VirtLabGuest:
         self.lab = lab
         self.name = name
         self.image = image
+        self.dominfo = None
 
     def __getattr__(self, name):
         value = None
@@ -273,13 +276,57 @@ class VirtLabGuest:
             self.remove_var('mac')
             self.remove_vardir()
 
+    def domain_info(self):
+        if self.dominfo is None:
+            dominfo = {}
+            try:
+                for line in virsh('dominfo', self.name).splitlines():
+                    if not line:
+                        continue
+                    key,value = line.split(':', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    dominfo[key] = value
+            except VirshError:
+                return None
+            self.dominfo = dominfo
+        return self.dominfo
+
     def domain_exists(self):
         """Return True if domain exists."""
+        return self.domain_info() is not None
+
+    def domain_running(self):
+        """Return True if domain is running."""
+        return self.domain_exists() and self.domain_info()['State'] == 'running'
+
+    def domain_start(self):
+        if not self.domain_exists():
+            error('Domain %s does not exist.' % self.name)
+            return
+        if self.domain_running():
+            trace('Skipping start; domain %s is already running.' % self.name)
+            return
+        trace('Starting domain %s' % self.name)
         try:
-            virsh('dominfo', self.name)
-            return True
-        except VirshError:
-            return False
+            output = virsh('start', self.name)
+            info(output.strip())
+        except VirshError as e:
+            error('Failed to start %s' % self.name)
+
+    def domain_stop(self):
+        if not self.domain_exists():
+            trace('Skipping stop; domain %s does not exist' % self.name)
+            return
+        if not self.domain_running():
+            trace('Skipping stop; domain %s is not running' % self.name)
+            return
+        trace('Stopping domain %s' % self.name)
+        try:
+            output = virsh('shutdown', self.name)
+            info(output.strip())
+        except VirshError as e:
+            error('Failed to stop %s' % self.name)
 
     def domain_mac_addr(self):
         """Return the first mac address in the domain definition, if one."""
@@ -368,12 +415,12 @@ class VirtLab:
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.create.__doc__)
+        parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
         parser.add_argument('-c', '--config')
         for key in sorted(DEFAULTS.keys()):
             parser.add_argument('--'+key)
-        parser.add_argument('name')
         self._parse_args(parser)
 
         lab = VirtLabValues(self.args.name, self.args)
@@ -389,12 +436,12 @@ class VirtLab:
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.destroy.__doc__)
+        parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
         parser.add_argument('-c', '--config')
         parser.add_argument('--purge', action='store_true')
         parser.add_argument('--images')
-        parser.add_argument('name')
         self._parse_args(parser)
 
         lab = VirtLabValues(self.args.name, self.args)
@@ -404,6 +451,34 @@ class VirtLab:
             rc = run(lab.postdestroy)
             if rc != 0:
                 die('post-destroy command failed: %s; rc=%d' % (lab.postdestroy, rc))
+
+    def start(self):
+        """Start the virtual lab guests."""
+        parser = argparse.ArgumentParser(
+            prog=self._progname(),
+            description=self.start.__doc__)
+        parser.add_argument('name')
+        parser.add_argument('-v', '--verbose', action='store_true')
+        parser.add_argument('-n', '--dryrun', action='store_true')
+        self._parse_args(parser)
+
+        lab = VirtLabValues(self.args.name, self.args)
+        for guest in lab.guests():
+            guest.domain_start()
+
+    def stop(self):
+        """Stop the virtual lab guests."""
+        parser = argparse.ArgumentParser(
+            prog=self._progname(),
+            description=self.stop.__doc__)
+        parser.add_argument('name')
+        parser.add_argument('-v', '--verbose', action='store_true')
+        parser.add_argument('-n', '--dryrun', action='store_true')
+        self._parse_args(parser)
+
+        lab = VirtLabValues(self.args.name, self.args)
+        for guest in lab.guests():
+            guest.domain_stop()
 
     def list(self):
         """List virtual labs."""
