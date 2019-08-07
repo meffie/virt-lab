@@ -96,11 +96,28 @@ def run(args):
     else:
         cmdline = "%s" % args
     if dryrun:
-        trace('skipping: %s' % cmdline)
+        trace('Skipping: %s' % cmdline)
         return 0
-    trace('running: %s' % cmdline)
+    trace('Running: %s' % cmdline)
     rc = os.system(cmdline)
     return rc
+
+
+class VirshError(Exception):
+    pass
+
+def virsh(command, *options):
+    args = ['virsh', command]
+    args.extend(list(options))
+    cmd = ' '.join(args)
+    pipe = os.popen(cmd + ' 2>&1')
+    if not pipe:
+        raise VirshError('Failed to run command: %s' % cmd)
+    output = pipe.read()
+    rc = pipe.close()
+    if rc is not None and rc != 0:
+        raise VirshError('Error while running command: %s, rc=%d' % (cmd, rc))
+    return output
 
 
 class VirtLabFormatter(string.Formatter):
@@ -258,20 +275,25 @@ class VirtLabGuest:
 
     def domain_exists(self):
         """Return True if domain exists."""
-        rc = os.system('virsh dominfo %s >/dev/null 2>/dev/null' % (self.name))
-        return rc == 0
+        try:
+            virsh('dominfo', self.name)
+            return True
+        except VirshError:
+            return False
 
     def domain_mac_addr(self):
         """Return the first mac address in the domain definition, if one."""
-        xml = os.path.join(self.vmdir, self.name, self.name + '.xml')
-        rc = os.system('virsh dumpxml %s >%s' % (self.name, xml))
-        if rc == 0:
-            with open(xml) as f:
-                for line in f.readlines():
-                    m = re.search(r"<mac address='([0-9a-fA-F:]+)'/>", line)
-                    if m:
-                        mac = m.group(1)
-                        return mac
+        try:
+            text = virsh('dumpxml', self.name)
+            for line in text.splitlines():
+                m = re.search(r"<mac address='([0-9a-fA-F:]+)'/>", line)
+                if m:
+                    mac = m.group(1)
+                    trace('guest %s has mac %s' % (self.name, mac))
+                    return m.group(1)
+        except VirshError:
+            pass
+        trace('guest %s: mac not found' % self.name)
         return None
 
     def read_var(self, name):
@@ -399,26 +421,20 @@ class VirtLab:
         except IOError as e:
             die('Unable to read config file %s.\n%s' % (self.args.config, e))
 
-        if not self.args.brief:
-            tmpfile = '/tmp/virt-lab-list'
-            rc = os.system('virsh list --name --all >%s' % tmpfile)
-            if rc != 0:
-                die('Unable to run virsh list.')
-            with open(tmpfile) as f:
-                names = set(f.read().split())
-
-        for section in config.sections():
-            if self.args.brief:
+        if self.args.brief:
+            for section in config.sections():
                 print(section)
-            else:
+        else:
+            names = virsh('list', '--name', '--all').split()
+            for section in config.sections():
                 lab = VirtLabValues(section, self.args)
                 desc = lab.desc if lab.desc else ''
                 guests = [g.name for g in lab.guests()]
-                created = 'yes' if names & set(guests) else 'no'
+                active = 'yes' if set(names) & set(guests) else 'no'
                 print('Name:', lab.name)
                 print('Desc:', desc)
-                print('Guests:', ' '.join(guests))
-                print('Created:', created)
+                print('Guests:', ', '.join(guests))
+                print('Active:', active)
                 print()
 
 
