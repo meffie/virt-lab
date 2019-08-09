@@ -92,11 +92,22 @@ def mkdirp(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
+def shellquote(s):
+    """Return a shell-escaped string."""
+    s = str(s)
+    if not s:
+        return "''"
+    m = re.search(r'[^a-zA-Z0-9_:\-\./]', s)
+    if m:
+        s = "'" + s.replace("'", "'\"'\"'") + "'"
+    return s
+
 def run(args):
+    """Run a command."""
     if isinstance(args, (list, tuple)):
-        cmdline = ' '.join(args)
+        cmdline = ' '.join([shellquote(a) for a in args])
     else:
-        cmdline = "%s" % args
+        cmdline = str(args)
     if dryrun:
         trace('Skipping: %s' % cmdline)
         return 0
