@@ -151,9 +151,9 @@ class VirtLabValues:
         self.config = None
 
     def guests(self):
-        for i,image in enumerate(self.get_images()):
+        for i,distro in enumerate(self.get_images()):
             name = self.namefmt.format(lab=self.name, guest=(i+1))
-            yield VirtLabGuest(name, image, self)
+            yield VirtLabGuest(name, distro, self)
 
     def __getattr__(self, name):
         return self.get(name)
@@ -236,10 +236,10 @@ class VirtLabValues:
 
 class VirtLabGuest:
 
-    def __init__(self, name, image, lab):
+    def __init__(self, name, distro, lab):
         self.lab = lab
         self.name = name
-        self.image = image
+        self.distro = distro
         self.dominfo = None
 
     def __getattr__(self, name):
@@ -262,19 +262,39 @@ class VirtLabGuest:
         if self.domain_exists():
             warn('Skipping %s: domain already exists.' % self.name)
             return
-        args = [
-            'kvm-install-vm',
-            'create',
-            '-a',
-            '-b', self.bridge,
-            '-D', self.domain,
-            '-k', self.key,
-            '-t', self.image,
-        ]
-        if self.mac:
-            args.extend(['-M', self.mac])
+
+        def flag(switch, value):
+            if value:
+                args.append(switch)
+
+        def opt(switch, value):
+            if value is not None:
+                args.append(switch)
+                args.append(value)
+
+        args = ['kvm-install-vm', 'create']
+        flag('-v', verbose)
+        flag('-a', self.autostart)
+        opt('-b', self.bridge)
+        opt('-c', self.cpus)
+        opt('-d', self.disksize)
+        opt('-D', self.domain)
+        opt('-f', self.feature)
+        opt('-g', self.graphics)
+        opt('-i', self.image)
+        opt('-k', self.key)
+        opt('-l', self.imagedir)
+        opt('-L', self.vmdir)
+        opt('-m', self.memory)
+        opt('-M', self.mac)
+        opt('-p', self.port)
+        opt('-s', self.scriptname)
+        opt('-t', self.distro)
+        opt('-T', self.timezone)
+        opt('-u', self.user)
         args.append(self.name)
-        info('creating guest %s with image %s' % (self.name, self.image))
+
+        info('creating guest %s' % self.name)
         rc = run(args)
         if rc != 0:
             die('Failed to create guest %s' % (self.name))
