@@ -209,6 +209,8 @@ class VirtLabGuest:
         self.dominfo = None
 
     def __getattr__(self, name):
+        if name == 'status':
+            return self.get_status()
         value = None
         if name == 'mac':
             value = self.get_mac()
@@ -220,13 +222,13 @@ class VirtLabGuest:
         trace('%s: %12s = %s' % (self.name, name, value))
         return value
 
-    def get_cfg_value(self, name):
-        try:
-            section = '%s.%d' % (self.lab.name, self.number)
-            value = self.lab.config.get(section, name)
-        except (NoSectionError, NoOptionError):
-            value = None
-        return value
+    def get_status(self):
+        dominfo = self.domain_info()
+        if dominfo:
+            status = dominfo['State']
+        else:
+            status = 'not installed'
+        return status
 
     def get_mac(self):
         if self.domain_exists():
@@ -234,6 +236,14 @@ class VirtLabGuest:
         else:
             mac = self.read_var('mac')
         return mac
+
+    def get_cfg_value(self, name):
+        try:
+            section = '%s.%d' % (self.lab.name, self.number)
+            value = self.lab.config.get(section, name)
+        except (NoSectionError, NoOptionError):
+            value = None
+        return value
 
     def create(self):
         if self.domain_exists():
@@ -511,9 +521,6 @@ class VirtLab:
         self._parse_args(parser)
         self._read_config()
 
-        if not self._args.brief:
-            names = virsh('list', '--name', '--all').split()
-
         for section in self._config.sections():
             if '.' in section:
                 continue # skip subsections
@@ -522,13 +529,12 @@ class VirtLab:
                 print(name)
             else:
                 lab = VirtLabValues(name, self._args, self._config)
-                desc = lab.desc if lab.desc else ''
-                guests = [g.name for g in lab.guests()]
-                active = 'yes' if set(names) & set(guests) else 'no'
-                print('Name:', lab.name)
-                print('Desc:', desc)
-                print('Guests:', ', '.join(guests))
-                print('Active:', active)
+                print('- name:', lab.name)
+                if lab.desc:
+                    print('  desc:', lab.desc)
+                print('  guests:')
+                for guest in lab.guests():
+                    print('  - %s: %s %s' % (guest.name, guest.distro, guest.status))
                 print()
 
     def main(self):
