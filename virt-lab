@@ -144,6 +144,9 @@ class VirtLabFormatter(string.Formatter):
 class VirtLabValues:
 
     def __init__(self, name, args, config):
+        m = re.search(r'[^a-zA-Z0-9_]', name)
+        if m:
+            die('Invalid lab name.')
         self.name = name
         self.lab = name # alias
         self.values = {}
@@ -152,8 +155,9 @@ class VirtLabValues:
 
     def guests(self):
         for i,distro in enumerate(self.get_images()):
-            name = self.namefmt.format(lab=self.name, guest=(i+1))
-            yield VirtLabGuest(name, distro, self)
+            number = i + 1
+            name = self.namefmt.format(lab=self.name, guest=number)
+            yield VirtLabGuest(name, number, distro, self)
 
     def __getattr__(self, name):
         return self.get(name)
@@ -229,9 +233,10 @@ class VirtLabValues:
 
 class VirtLabGuest:
 
-    def __init__(self, name, distro, lab):
+    def __init__(self, name, number, distro, lab):
         self.lab = lab
         self.name = name
+        self.number = number
         self.distro = distro
         self.dominfo = None
 
@@ -240,8 +245,18 @@ class VirtLabGuest:
         if name == 'mac':
             value = self.get_mac()
             self.mac = value
-        else:
+        if value is None:
+            value = self.get_cfg_value(name)
+        if value is None:
             value = self.lab.get(name)
+        return value
+
+    def get_cfg_value(self, name):
+        try:
+            section = '%s.%d' % (self.lab.name, self.number)
+            value = self.lab.config.get(section, name)
+        except (NoSectionError, NoOptionError):
+            value = None
         return value
 
     def get_mac(self):
@@ -532,6 +547,8 @@ class VirtLab:
             names = virsh('list', '--name', '--all').split()
 
         for section in self._config.sections():
+            if '.' in section:
+                continue # skip subsections
             name = section
             if self._args.brief:
                 print(name)
