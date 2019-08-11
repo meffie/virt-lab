@@ -143,12 +143,12 @@ class VirtLabFormatter(string.Formatter):
 
 class VirtLabValues:
 
-    def __init__(self, name, args):
+    def __init__(self, name, args, config):
         self.name = name
         self.lab = name # alias
         self.values = {}
         self.args = args
-        self.config = None
+        self.config = config
 
     def guests(self):
         for i,distro in enumerate(self.get_images()):
@@ -181,13 +181,6 @@ class VirtLabValues:
 
     def get_cfg_value(self, name):
         value = None
-        if self.config is None:
-            self.config = ConfigParser()
-            try:
-                with open(self.args.config) as f:
-                    self.config.readfp(f)
-            except IOError as e:
-                die('Unable to read config file %s.\n%s' % (self.args.config, e))
         try:
             value = self.config.get(self.name, name)
         except NoSectionError:
@@ -411,6 +404,7 @@ class VirtLab:
 
     def __init__(self):
         self.command = ''
+        self.config = ConfigParser()
         self.args = argparse.Namespace(
             verbose=False,
             dryrun=False,
@@ -428,6 +422,13 @@ class VirtLab:
         global dryrun
         verbose = self.args.verbose
         dryrun = self.args.dryrun
+
+    def _read_config(self):
+        try:
+            with open(self.args.config) as f:
+                self.config.readfp(f)
+        except IOError as e:
+            die('Unable to read config file %s.\n%s' % (self.args.config, e))
 
     def _unknown(self):
         die('Unknown command: %s' % (self.command))
@@ -453,8 +454,9 @@ class VirtLab:
         for key in sorted(DEFAULTS.keys()):
             parser.add_argument('--'+key)
         self._parse_args(parser)
+        self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args)
+        lab = VirtLabValues(self.args.name, self.args, self.config)
         for guest in lab.guests():
             guest.create()
         if lab.postcreate:
@@ -474,8 +476,9 @@ class VirtLab:
         parser.add_argument('--purge', action='store_true')
         parser.add_argument('--images')
         self._parse_args(parser)
+        self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args)
+        lab = VirtLabValues(self.args.name, self.args, self.config)
         for guest in lab.guests():
             guest.destroy(self.args.purge)
         if lab.postdestroy:
@@ -491,9 +494,11 @@ class VirtLab:
         parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
+        parser.add_argument('-c', '--config')
         self._parse_args(parser)
+        self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args)
+        lab = VirtLabValues(self.args.name, self.args, self.config)
         for guest in lab.guests():
             guest.domain_start()
 
@@ -505,9 +510,11 @@ class VirtLab:
         parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
+        parser.add_argument('-c', '--config')
         self._parse_args(parser)
+        self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args)
+        lab = VirtLabValues(self.args.name, self.args, self.config)
         for guest in lab.guests():
             guest.domain_stop()
 
@@ -516,24 +523,20 @@ class VirtLab:
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.list.__doc__)
-        parser.add_argument('-c', '--config')
         parser.add_argument('-b', '--brief', action='store_true')
+        parser.add_argument('-c', '--config')
         self._parse_args(parser)
+        self._read_config()
 
-        config = ConfigParser()
-        try:
-            with open(self.args.config) as f:
-                config.readfp(f)
-        except IOError as e:
-            die('Unable to read config file %s.\n%s' % (self.args.config, e))
-
-        if self.args.brief:
-            for section in config.sections():
-                print(section)
-        else:
+        if not self.args.brief:
             names = virsh('list', '--name', '--all').split()
-            for section in config.sections():
-                lab = VirtLabValues(section, self.args)
+
+        for section in self.config.sections():
+            name = section
+            if self.args.brief:
+                print(name)
+            else:
+                lab = VirtLabValues(name, self.args, self.config)
                 desc = lab.desc if lab.desc else ''
                 guests = [g.name for g in lab.guests()]
                 active = 'yes' if set(names) & set(guests) else 'no'
@@ -542,7 +545,6 @@ class VirtLab:
                 print('Guests:', ', '.join(guests))
                 print('Active:', active)
                 print()
-
 
     def main(self):
         """Main return for virt-lab"""
