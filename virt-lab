@@ -62,7 +62,7 @@ DEFAULTS = {
     'domain': 'example.com',
     'bridge': 'virbr0',
     'gateway': '192.168.122.1',
-    'images': '3',
+    'guests': '3',
     'distro': 'centos7',
     'namefmt': '{lab}{guest:02d}',
     'vmdir': '~/virt/vms',
@@ -154,13 +154,14 @@ class VirtLabValues:
         self.config = config
 
     def guests(self):
-        for i,distro in enumerate(self.get_images()):
-            number = i + 1
+        nguests = int(self.get('guests'))
+        for number in range(1, nguests+1):
             name = self.namefmt.format(lab=self.name, guest=number)
-            yield VirtLabGuest(name, number, distro, self)
+            yield VirtLabGuest(self, name, number)
 
     def __getattr__(self, name):
-        return self.get(name)
+        value = self.get(name)
+        return value
 
     def get(self, name):
         if not name in self.values:
@@ -193,51 +194,18 @@ class VirtLabValues:
             pass
         return value
 
-    def get_images(self):
-        images = self.get('images')
-        if hasattr(images, 'split'):
-            images = images.split()
-        for image in images:
-            number,distro = self.parse_image_string(image)
-            for i in range(number):
-                yield distro
-
     def expand_string(self, value):
         formatter = VirtLabFormatter(self)
         value = formatter.format(value)
         return value
 
-    def parse_image_string(self, image):
-        trace('parse_image_string(): image=%s' % image)
-        image = image.strip()
-        m = re.search('^(\d+):(\w+)$', image)
-        if m:
-            number = int(m.group(1))
-            distro = m.group(2)
-            trace('number=%d, distro=%s' % (number,distro))
-            return number, distro
-        m = re.search('^(\d+)$', image)
-        if m:
-            number = int(m.group(1))
-            distro = self.get('distro')
-            trace('number=%d, distro=%s (default)' % (number,distro))
-            return number, distro
-        m = re.search('^(\w+)$', image)
-        if m:
-            number = 1
-            distro = m.group(1)
-            trace('number=%d (default), distro=%s' % (number,distro))
-            return number, distro
-        die('Unable to parse image string: "%s"' % image)
-
 
 class VirtLabGuest:
 
-    def __init__(self, name, number, distro, lab):
+    def __init__(self, lab, name, number):
         self.lab = lab
         self.name = name
         self.number = number
-        self.distro = distro
         self.dominfo = None
 
     def __getattr__(self, name):
@@ -249,6 +217,7 @@ class VirtLabGuest:
             value = self.get_cfg_value(name)
         if value is None:
             value = self.lab.get(name)
+        trace('%s: %12s = %s' % (self.name, name, value))
         return value
 
     def get_cfg_value(self, name):
@@ -350,7 +319,7 @@ class VirtLabGuest:
         try:
             output = virsh('start', self.name)
             info(output.strip())
-        except VirshError as e:
+        except VirshError:
             error('Failed to start %s' % self.name)
 
     def domain_stop(self):
@@ -364,7 +333,7 @@ class VirtLabGuest:
         try:
             output = virsh('shutdown', self.name)
             info(output.strip())
-        except VirshError as e:
+        except VirshError:
             error('Failed to stop %s' % self.name)
 
     def domain_mac_addr(self):
@@ -388,7 +357,7 @@ class VirtLabGuest:
             path = os.path.join(self.vardir, self.name, name)
             with open(path) as f:
                 value = f.read().strip()
-        except Exception as e:
+        except Exception:
             pass
         return value
 
@@ -489,7 +458,6 @@ class VirtLab:
         parser.add_argument('-n', '--dryrun', action='store_true')
         parser.add_argument('-c', '--config')
         parser.add_argument('--purge', action='store_true')
-        parser.add_argument('--images')
         self._parse_args(parser)
         self._read_config()
 

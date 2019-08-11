@@ -1,29 +1,23 @@
 #
 # Example virt-lab configuration.
 #
-# The 'images' option are in the form:
-#
-#   <number>[:<distro>] [<number>:<distro>] ...
-#
-# Examples:
-#
-#    images = 3                    # 3 guests running default distro
-#    images = centos6              # 1 centos6 guest
-#    images = 3:centos7 2:debian   # 3 centos7 guests and 2 debian guests
-#
-#
-# [test]
-# desc = My test environment
-# images = 5
-# key =  ~/.ssh/mykey.pub
-# domain = example.com
-# bridge = virbr0
-# gateway = 192.168.122.1
-# postcreate = systemd-resolve --interface {bridge} --set-dns {gateway} --set-domain {domain}
-#
-# [dev]
-# desc = Guests for development
-# distro = debian
-# images = 4
-# postcreate = ansible-playbook xyzzy.yaml
-#
+
+[test]
+desc = My test environment
+guests = 5
+distro = centos7
+key =  ~/.ssh/mykey.pub
+domain = example.com
+bridge = virbr0
+gateway = 192.168.122.1
+postcreate = systemd-resolve --interface {bridge} --set-dns {gateway} --set-domain {domain}
+
+[dev]
+desc = Guests for development
+distro = debian
+images = 4
+postcreate = ansible-playbook xyzzy.yaml
+
+[dev.1]
+distro = centos6
+disksize = 20
