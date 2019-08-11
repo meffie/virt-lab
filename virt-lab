@@ -403,9 +403,9 @@ class VirtLabGuest:
 class VirtLab:
 
     def __init__(self):
-        self.command = ''
-        self.config = ConfigParser()
-        self.args = argparse.Namespace(
+        self._command = ''
+        self._config = ConfigParser()
+        self._args = argparse.Namespace(
             verbose=False,
             dryrun=False,
             purge=False,
@@ -413,25 +413,25 @@ class VirtLab:
 
     def _progname(self):
         """Subcommand program name."""
-        return "%s %s" % (os.path.basename(sys.argv[0]), self.command)
+        return "%s %s" % (os.path.basename(sys.argv[0]), self._command)
 
     def _parse_args(self, parser):
         """Parse subcommand arguments."""
-        self.args = parser.parse_args(sys.argv[2:], self.args)
+        self._args = parser.parse_args(sys.argv[2:], self._args)
         global verbose
         global dryrun
-        verbose = self.args.verbose
-        dryrun = self.args.dryrun
+        verbose = self._args.verbose
+        dryrun = self._args.dryrun
 
     def _read_config(self):
         try:
-            with open(self.args.config) as f:
-                self.config.readfp(f)
+            with open(self._args.config) as f:
+                self._config.readfp(f)
         except IOError as e:
-            die('Unable to read config file %s.\n%s' % (self.args.config, e))
+            die('Unable to read config file %s.\n%s' % (self._args.config, e))
 
     def _unknown(self):
-        die('Unknown command: %s' % (self.command))
+        die('Unknown command: %s' % sys.argv[1])
 
     def help(self):
         """Print usage string."""
@@ -456,7 +456,7 @@ class VirtLab:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args, self.config)
+        lab = VirtLabValues(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.create()
         if lab.postcreate:
@@ -478,9 +478,9 @@ class VirtLab:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args, self.config)
+        lab = VirtLabValues(self._args.name, self._args, self._config)
         for guest in lab.guests():
-            guest.destroy(self.args.purge)
+            guest.destroy(self._args.purge)
         if lab.postdestroy:
             rc = run(lab.postdestroy)
             if rc != 0:
@@ -498,7 +498,7 @@ class VirtLab:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args, self.config)
+        lab = VirtLabValues(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_start()
 
@@ -514,7 +514,7 @@ class VirtLab:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self.args.name, self.args, self.config)
+        lab = VirtLabValues(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_stop()
 
@@ -528,15 +528,15 @@ class VirtLab:
         self._parse_args(parser)
         self._read_config()
 
-        if not self.args.brief:
+        if not self._args.brief:
             names = virsh('list', '--name', '--all').split()
 
-        for section in self.config.sections():
+        for section in self._config.sections():
             name = section
-            if self.args.brief:
+            if self._args.brief:
                 print(name)
             else:
-                lab = VirtLabValues(name, self.args, self.config)
+                lab = VirtLabValues(name, self._args, self._config)
                 desc = lab.desc if lab.desc else ''
                 guests = [g.name for g in lab.guests()]
                 active = 'yes' if set(names) & set(guests) else 'no'
@@ -553,11 +553,11 @@ class VirtLab:
             description=DESC,
             usage=USAGE)
         parser.add_argument('command', help='subcommand to run')
-        args = parser.parse_args(sys.argv[1:2], self.args)
-        self.command = args.command
-        if self.command.startswith('_'):
-            self.command = '_unknown'
-        getattr(self, self.command, self._unknown)()
+        args = parser.parse_args(sys.argv[1:2], self._args)
+        self._command = args.command
+        if self._command.startswith('_'):
+            self._command = '_unknown'
+        getattr(self, self._command, self._unknown)()
 
 
 if __name__ == '__main__':
