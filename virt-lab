@@ -58,18 +58,31 @@ Commands:
   version           show version
 '''
 DEFAULTS = {
-    'key': '~/.ssh/id_rsa.pub',
-    'domain': 'example.com',
+    'autostart': True,
     'bridge': 'virbr0',
-    'gateway': '192.168.122.1',
-    'guests': '3',
+    'cpus': None,
+    'disksize': None,
     'distro': 'centos7',
+    'domain': 'example.com',
+    'feature': None,
+    'gateway': '192.168.122.1',
+    'graphics': None,
+    'guests': '3',
+    'imagedir': None,
+    'image': None,
+    'key': None,
+    'mac': None,
+    'memory': None,
     'namefmt': '{lab}{guest:02d}',
-    'vmdir': '~/virt/vms',
+    'port': None,
+    'scriptname': None,
+    'timezone': None,
+    'user': None,
     'vardir': '~/virt/var',
+    'vmdir': '~/virt/vms',
 }
 TEMPLATES = ('postcreate', 'postdestroy')
-PATHNAMES = ('key', 'vmdir', 'vardir')
+PATHNAMES = ('key', 'imagedir', 'vmdir', 'vardir')
 
 def trace(msg):
     if verbose:
@@ -446,7 +459,10 @@ class VirtLab:
         parser.add_argument('-n', '--dryrun', action='store_true')
         parser.add_argument('-c', '--config')
         for key in sorted(DEFAULTS.keys()):
-            parser.add_argument('--'+key)
+            if isinstance(DEFAULTS[key], bool):
+                parser.add_argument('--'+key, action='store_true')
+            else:
+                parser.add_argument('--'+key)
         self._parse_args(parser)
         self._read_config()
 
