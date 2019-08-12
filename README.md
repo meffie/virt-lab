@@ -1,40 +1,65 @@
 # Virtual Linux Lab
 
-Install sets of virtual guests using cloud-init images on a local KVM
-hypervisor. Guest sets are defined in a simple configuration file.  The last MAC
-address assigned to each guest is saved for the next generation.
+Install virtual guests using cloud-init images on a local KVM hypervisor. Guest
+sets are defined in a configuration file.  The last MAC address assigned to
+each guest is saved and reused for the next generation.
 
-`virt-lab` can be useful for spinning up clusters of guests for testing and/or
-development and then removing them after the tests have been run.
+`virt-lab` can be useful for spinning up temporary clusters of guests for
+testing or development.
 
-`virt-lab` uses the excellent [`kvm-install-vm`][1] shell script written by
-Giovanni Torres to download and install the cloud-init images.
+`virt-lab` is based on the excellent [`kvm-install-vm`][1] shell script written
+by Giovanni Torres to download and install cloud-init images.
+
+## Usage
+
+      usage: virt-lab [<options>] <command> [<name>]
+      
+      Commands:
+        create <name>     create a set of guests
+        destroy <name>    destroy a set of guests
+        start <name>      start a set of guests
+        stop <name>       shutdown a set of guests
+        list              list guest sets
+        help              show help
+        version           show version
+      
+      Install and remove sets of guests on a local hypervisor using cloud-init images.
+
+Guest set names are defined in the file `$HOME/virt-lab.cfg`. The `--config`
+option may be used to specify an alternate configuration file.
+
 
 ## Setup
 
-You need to have the KVM hypervisor installed, along with a few other tools.
+A local KVM hypervisor must be installed and running along with a few other
+tools.
 
-* [kvm-install-vm][1]
-* genisoimage or mkisofs
-* virt-install
-* libguestfs-tools-c
-* qemu-img
-* libvirt-client
+* [`kvm-install-vm`][1]
+* `virt-install`
+* `genisoimage` or `mkisofs`
+* `libguestfs-tools-c`
+* `qemu-img`
+* `libvirt-client`
+
+The `kvm-install-vm` tool will need to be downloaded from github.com.
+Distribution packages are not available at this time.
 
 ### Setup playbook
 
-An Ansible playbook to install the KVM hypervisor and required tools is
+An Ansible playbook to install the KVM hypervisor and the required tools is
 provided in the setup directory. This should be run as a regular user on the
-local machine.  The playbook requires roles from Ansible galaxy which are
-listed in the requirements file.  The run the playbook:
+local machine.  The required role to run this playbook are listed in the
+`requirements.yaml` file so you can install the with `ansible-galaxy`.
+
+The run the playbook:
 
     $ cd setup
     $ ansible-galaxy install -r requirements.yaml
     $ ansible-playbook virtlab.yaml
 
-After running the play book, log out and and then back in again to join the new
-libvirt group.
-
+After running the play book, be sure to log out and then back it to your linux
+session in order to join the newly created libvirt user groups. Verify you have
+access by running the `virsh list` command.
 
 ### Guest hostname resolution
 
@@ -53,6 +78,19 @@ guests by hostname instead of needing to ssh to them by IP address.
 
 
 ## Configuration
+
+Guest sets are defined in the `$HOME/virt-lab.cfg` file, or the file specified
+by the `--config` command line option. The configuration file is in INI-style
+format.
+
+The section names specify the **lab** names available to the `virt-lab`
+commands.  Lab names are limited to ASCII alphanumeric characters and the
+underscore (`'_'`) character. The options for a given section specify the guest
+configuration for each guest in the **lab**.  It is possible to override values
+for a specify guest by providing a subsections in the INI file in the form
+`<lab>.<number>`. Guest numbers start with 1.
+
+Option names are:
 
 | Option     | Description               | Default |
 | ---------- | ------------------------- | ------- |
@@ -73,15 +111,19 @@ guests by hostname instead of needing to ssh to them by IP address.
 | memory     | memory (MB)               | 1024 |
 | namefmt    | guest name format         | `{lab}{guest:02d}` |
 | port       | console port              | auto-assigned |
-| scriptname | custom command            | none |
+| postcreate | command run after lab is created | none |
+| scriptname | command run after guest is created | none |
 | timezone   | timezone name             | US/Eastern |
 | user       | additional username       | current login username |
 | imagedir   | image directory           | `$HOME/virt/images` |
 | vardir     | guest data directory      | `$HOME/virt/var` |
 | vmdir      | data directory            | `$HOME/virt/vms` |
 
+
 ## Distributions
 
+The distro option specifies which cload-init image will be downloaded and
+installed for a guest.  The following are currently supported:
 
 | Name            | Description                         | Login    |
 | --------------- | ----------------------------------- | -------- |
@@ -97,9 +139,95 @@ guests by hostname instead of needing to ssh to them by IP address.
 | ubuntu1804      | Ubuntu 18.04 LTS (Bionic Beaver)    | ubuntu   |
 
 
-## Examples
+# Examples
 
-todo
+Here is an example `virt-lab.cfg` configuration file.
+
+    $ cat $HOME/virt-lab.cfg
+    [test]
+    desc = My test environment
+    guests = 6
+    distro = centos7
+    key =  ~/.ssh/mykey.pub
+    domain = example.com
+    bridge = vlbr0
+    gateway = 192.168.123.1
+    postcreate = systemd-resolve --interface {bridge} --set-dns {gateway} --set-domain {domain}
+    
+    [dev]
+    desc = Guests for development
+    distro = debian
+    images = 3
+    postcreate = ansible-playbook xyzzy.yaml
+    
+    [dev.1]
+    distro = centos6
+    disksize = 20
+
+List the configured labs.
+
+    $ virt-lab list
+    - name: test
+      desc: My test environment
+      guests:
+      - test01: centos7, undefined
+      - test02: centos7, undefined
+      - test03: centos7, undefined
+      - test04: centos7, undefined
+      - test05: centos7, undefined
+    
+    - name: dev
+      desc: Guests for development
+      guests:
+      - dev01: centos6, undefined
+      - dev02: debian, undefined
+      - dev03: debian, undefined
+
+Create the "test" lab.
+
+    $ virt-lab create test
+     [info]: creating guest test01
+    - Copying cloud image (CentOS-7-x86_64-GenericCloud.qcow2) ...
+    ...
+    - DONE
+    [info]: creating guest test02
+    ...
+    - DONE
+    [info]: creating guest test03
+    ...
+    - DONE
+    [info]: creating guest test04
+    ...
+    - DONE
+    [info]: creating guest test05
+    ...
+    - DONE
+
+    $ virt lab list
+    - name: test
+      desc: My test environment
+      guests:
+      - test01: centos7, running
+      - test02: centos7, running
+      - test03: centos7, running
+      - test04: centos7, running
+      - test05: centos7, running
+    
+    - name: dev
+      desc: Guests for development
+      guests:
+      - dev01: centos6, undefined
+      - dev02: debian, undefined
+      - dev03: debian, undefined
+
+
+To destroy the guests after the tests have been run.
+
+    $ virt-lab destroy test
+    [info]: destroying guest test01
+    - Destroying test01 domain ...
+    ...
+    [info]: destroying guest test05
 
 
 [1]: https://github.com/giovtorres/kvm-install-vm
