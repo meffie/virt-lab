@@ -122,14 +122,14 @@ class VirshError(Exception):
 def virsh(command, *options):
     args = ['virsh', command]
     args.extend(list(options))
-    cmd = ' '.join(args)
-    pipe = os.popen(cmd + ' 2>&1')
+    cmdline = ' '.join([shellquote(a) for a in args])
+    pipe = os.popen(cmdline + ' 2>&1')
     if not pipe:
-        raise VirshError('Failed to run command: %s' % cmd)
+        raise VirshError('Failed to run command: %s' % cmdline)
     output = pipe.read()
     rc = pipe.close()
     if rc is not None and rc != 0:
-        raise VirshError('Error while running command: %s, rc=%d' % (cmd, rc))
+        raise VirshError('Error while running command: %s, rc=%d' % (cmdline, rc))
     return output
 
 
