@@ -227,7 +227,7 @@ class VirtLabGuest:
         if dominfo:
             status = dominfo['State']
         else:
-            status = 'not installed'
+            status = 'undefined'
         return status
 
     def get_mac(self):
@@ -517,6 +517,7 @@ class VirtLab:
             prog=self._progname(),
             description=self.list.__doc__)
         parser.add_argument('-b', '--brief', action='store_true')
+        parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-c', '--config')
         self._parse_args(parser)
         self._read_config()
@@ -534,7 +535,7 @@ class VirtLab:
                     print('  desc:', lab.desc)
                 print('  guests:')
                 for guest in lab.guests():
-                    print('  - %s: %s %s' % (guest.name, guest.distro, guest.status))
+                    print('  - %s: %s, %s' % (guest.name, guest.distro, guest.status))
                 print()
 
     def main(self):
