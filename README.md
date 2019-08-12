@@ -1,14 +1,14 @@
 # Virtual Linux Lab
 
-Install virtual guests using cloud-init images on a local KVM hypervisor. Guest
-sets are defined in a configuration file.  The last MAC address assigned to
-each guest is saved and reused for the next generation.
+Install sets of virtual guests on a local KVM hypervisor with cloud-init
+images. Guest sets, called **labs**, are defined in a configuration file.  The
+MAC addresses assigned to guests are saved and reused for the next generation.
 
 `virt-lab` can be useful for spinning up temporary clusters of guests for
-testing or development.
+testing or development on your local hypervisor.
 
-`virt-lab` is based on the excellent [`kvm-install-vm`][1] shell script written
-by Giovanni Torres to download and install cloud-init images.
+`virt-lab` is requires the [`kvm-install-vm`][1] shell script by Giovanni
+Torres to download and install the cloud-init images.
 
 ## Usage
 
@@ -25,8 +25,8 @@ by Giovanni Torres to download and install cloud-init images.
       
       Install and remove sets of guests on a local hypervisor using cloud-init images.
 
-Guest set names are defined in the file `$HOME/virt-lab.cfg`. The `--config`
-option may be used to specify an alternate configuration file.
+Guest set names (labs) are defined in the file `$HOME/virt-lab.cfg`. The
+`--config` option may be used to specify an alternate configuration file.
 
 
 ## Setup
@@ -41,8 +41,8 @@ tools.
 * `qemu-img`
 * `libvirt-client`
 
-The `kvm-install-vm` tool will need to be downloaded from github.com.
-Distribution packages are not available at this time.
+Download the [`kvm-install-vm`][1] from github.com.  Distribution packages are
+not available at this time.
 
 ### Setup playbook
 
@@ -76,6 +76,17 @@ guests by hostname instead of needing to ssh to them by IP address.
    by providing a `postinstall` command in the `virt-lab` configuration file. See
    the `virt-lab.cfg.example` file the `systemd-resolve` command syntax.
 
+### Ubuntu notes
+
+Recent versions of [Ubuntu][2] have made the linux images unreadable by regular
+users, which breaks the the ability of non-root users to use libguestfs to
+modify images.  In order to fix this you'll need to override the file
+permission settings for the linux kernel images on ubuntu.
+
+This can be done with the `dpkg-stateoverride` command.  This will need to be
+done each time the kernel is upgraded.
+
+    $ sudo dpkg-statoverride --add root root 0644 /boot/vmlinux-$(uname -r) --update
 
 ## Configuration
 
@@ -231,3 +242,4 @@ To destroy the guests after the tests have been run.
 
 
 [1]: https://github.com/giovtorres/kvm-install-vm
+[2]: https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
