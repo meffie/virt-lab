@@ -411,12 +411,12 @@ class VirtLab:
 
     def __init__(self):
         self._command = ''
-        self._config = ConfigParser()
+        self._config = None
         self._args = argparse.Namespace(
             verbose=False,
             dryrun=False,
             purge=False,
-            config=os.path.expanduser('~/virt-lab.cfg'))
+            config=None)
 
     def _progname(self):
         """Subcommand program name."""
@@ -431,11 +431,27 @@ class VirtLab:
         dryrun = self._args.dryrun
 
     def _read_config(self):
-        try:
-            with open(self._args.config) as f:
-                self._config.readfp(f)
-        except IOError as e:
-            die('Unable to read config file %s.\n%s' % (self._args.config, e))
+        """Read the config file
+
+        When the file is specified with the --config option, try to read that
+        file only or fail.  When the config file is not specified, try to read
+        virt-lab.cfg in the current directory, and if not found, try to read
+        virt-lab.cfg in the home directory.
+        """
+        self._config = ConfigParser()
+        config = self._args.config
+        if config:
+            files = self._config.read([config])
+            if not files:
+                die('Unable to read config file %s.' % (config))
+        else:
+            config = 'virt-lab.cfg'
+            files = self._config.read([config])
+            if not files:
+                config = os.path.expanduser('~/virt-lab.cfg')
+                files = self._config.read([config])
+                if not files:
+                    die('Unable to read config file.')
 
     def _unknown(self):
         die('Unknown command: %s' % sys.argv[1])

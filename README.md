@@ -25,10 +25,6 @@ Torres to download and install the cloud-init images.
       
       Install and remove sets of guests on a local hypervisor using cloud-init images.
 
-Guest set names (labs) are defined in the file `$HOME/virt-lab.cfg`. The
-`--config` option may be used to specify an alternate configuration file.
-
-
 ## Setup
 
 A local KVM hypervisor must be installed and running along with a few other
@@ -90,9 +86,11 @@ done each time the kernel is upgraded.
 
 ## Configuration
 
-Guest sets are defined in the `$HOME/virt-lab.cfg` file, or the file specified
-by the `--config` command line option. The configuration file is in INI-style
-format.
+The guest sets, called **labs**, are defined in INI-style configuration file.
+`virt-lab` will attempt read the `virt-lab.cfg` file in the current directory,
+and if not found, will atempt to read the `virt-lab.cfg` file in the user's
+home directory.  Use the `--config` option to specify an alternative
+configuration file.
 
 The section names specify the **lab** names available to the `virt-lab`
 commands.  Lab names are limited to ASCII alphanumeric characters and the
