@@ -169,8 +169,7 @@ class VirtLabValues:
     def guests(self):
         nguests = int(self.get('guests'))
         for number in range(1, nguests+1):
-            name = self.namefmt.format(lab=self.name, guest=number)
-            yield VirtLabGuest(self, name, number)
+            yield VirtLabGuest(self, number)
 
     def __getattr__(self, name):
         value = self.get(name)
@@ -215,11 +214,14 @@ class VirtLabValues:
 
 class VirtLabGuest:
 
-    def __init__(self, lab, name, number):
-        self.lab = lab
-        self.name = name
-        self.number = number
+    def __init__(self, lab, number):
         self.dominfo = None
+        self.lab = lab
+        self.number = number
+        name = self.get_cfg_value('name')
+        if name is None:
+            name = lab.namefmt.format(lab=lab.name, guest=number)
+        self.name = name
 
     def __getattr__(self, name):
         if name == 'status':
