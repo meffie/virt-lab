@@ -185,6 +185,8 @@ class VirtLabValues:
         if value is None:
             value = self.get_cfg_value(name)
         if value is None:
+            value = self.get_global_value(name)
+        if value is None:
             value = DEFAULTS.get(name, None)
         if value is not None:
             if name in TEMPLATES:
@@ -204,6 +206,13 @@ class VirtLabValues:
             die('Lab name not found in config file %s' % (self.args.config))
         except NoOptionError:
             pass
+        return value
+
+    def get_global_value(self, name):
+        try:
+            value = self.config.get('.global', name)
+        except (NoSectionError, NoOptionError):
+            value = None
         return value
 
     def expand_string(self, value):
