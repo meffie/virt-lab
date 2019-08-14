@@ -236,8 +236,9 @@ class VirtLabGuest:
         return value
 
     def get_status(self):
+        lab = self.read_var('lab')
         dominfo = self.domain_info()
-        if dominfo:
+        if dominfo and lab == self.lab.name:
             status = dominfo['State']
         else:
             status = 'undefined'
@@ -260,7 +261,11 @@ class VirtLabGuest:
 
     def create(self):
         if self.domain_exists():
-            warn('Skipping %s: domain already exists.' % self.name)
+            lab = self.read_var('lab')
+            if lab and lab != self.lab.name:
+                warn('Skipping %s: domain already exists for lab %s.' % (self.name, lab))
+            else:
+                warn('Skipping %s: domain already exists.' % self.name)
             return
 
         def flag(switch, value):
@@ -299,10 +304,16 @@ class VirtLabGuest:
         if rc != 0:
             die('Failed to create guest %s' % (self.name))
         self.write_var('mac', self.domain_mac_addr())
+        self.write_var('lab', self.lab.name)
 
     def destroy(self, purge):
+        lab = self.read_var('lab')
+        if lab and lab != self.lab.name:
+            warn('Skipping %s: domain associated with lab %s.' % (self.name, lab))
+            return
         info('destroying guest %s' % self.name)
         run(['kvm-install-vm', 'remove', self.name])
+        self.remove_var('lab')
         if purge:
             self.remove_var('mac')
             self.remove_vardir()
