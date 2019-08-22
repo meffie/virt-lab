@@ -43,13 +43,13 @@ not available at this time.
 ### Setup playbook
 
 An Ansible playbook to install the KVM hypervisor and the required tools is
-provided in the setup directory. This should be run as a regular user on the
+provided in the playbooks directory. This should be run as a regular user on the
 local machine.  The required role to run this playbook are listed in the
 `requirements.yaml` file so you can install the with `ansible-galaxy`.
 
 The run the playbook:
 
-    $ cd setup
+    $ cd playbooks
     $ ansible-galaxy install -r requirements.yaml
     $ ansible-playbook virtlab.yaml
 
@@ -65,7 +65,7 @@ guests by hostname instead of needing to ssh to them by IP address.
 1. Configure a libvirt network which uses an external nameserver instead if
    local resolution. This is needed to avoid resolution looping between the
    libvirt dnsmasq and the local resolver. Such a network will be configured
-   by the setup Ansible playbook in the `setup` directory.
+   by the Ansible playbook in the `playbooks` directory.
 
 2. Each time guests have been installed, run the `systemd-resolve` command as a
    regular user to set the dns gateway for the virtual bridge. This can be done

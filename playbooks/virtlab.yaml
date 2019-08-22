@@ -1,6 +1,6 @@
 ---
 #
-# Install a virtual lab with local kvm hypervisor.
+# Install a local kvm hypervisor and tools to run virt-lab.
 #
 # Usage:
 #    ansible-galaxy install -r requirements.yaml
