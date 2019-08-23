@@ -399,7 +399,7 @@ class VirtLabGuest:
     def read_var(self, name):
         value = None
         try:
-            path = os.path.join(self.vardir, self.name, name)
+            path = os.path.join(self.vardir, 'guest', self.name, name)
             with open(path) as f:
                 value = f.read().strip()
         except Exception:
@@ -409,20 +409,20 @@ class VirtLabGuest:
     def write_var(self, name, value):
         if value is None:
             return
-        path = os.path.join(self.vardir, self.name, name)
+        path = os.path.join(self.vardir, 'guest', self.name, name)
         mkdirp(os.path.dirname(path))
         with open(path, 'w') as f:
             f.write('%s\n' % value)
 
     def remove_var(self, name):
-        path = os.path.join(self.vardir, self.name, name)
+        path = os.path.join(self.vardir, 'guest', self.name, name)
         try:
             os.unlink(path)
         except:
             pass
 
     def remove_vardir(self):
-        path = os.path.join(self.vardir, self.name)
+        path = os.path.join(self.vardir, 'guest', self.name)
         try:
             os.rmdir(path)
         except:
