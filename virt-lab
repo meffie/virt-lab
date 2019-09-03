@@ -194,6 +194,7 @@ class VirtLabValues:
         self.values = {}
         self.args = args
         self.config = config
+        self.vars = VirtLabVariables(os.path.join(self.vardir, 'labs', self.name + '.json'))
 
     def guests(self):
         nguests = int(self.get('guests'))
@@ -210,7 +211,11 @@ class VirtLabValues:
         return self.values[name]
 
     def get_value(self, name):
-        value = self.get_arg_value(name)
+        value = None
+        if name == 'status':
+            value = self.vars.get('status')
+        if value is None:
+            value = self.get_arg_value(name)
         if value is None:
             value = self.get_cfg_value(name)
         if value is None:
@@ -260,7 +265,7 @@ class VirtLabGuest:
         if name is None:
             name = lab.namefmt.format(lab=lab.name, guest=number)
         self.name = name
-        self.vars = VirtLabVariables(os.path.join(self.vardir, 'guest', self.name + '.json'))
+        self.vars = VirtLabVariables(os.path.join(self.vardir, 'guests', self.name + '.json'))
 
     def __getattr__(self, name):
         if name == 'status':
@@ -508,6 +513,7 @@ class VirtLabCommand:
             rc = run(lab.postcreate)
             if rc != 0:
                 die('post-create command failed: %s; rc=%d' % (lab.postcreate, rc))
+        lab.vars.set('status', 'created')
 
     def destroy(self):
         """Destroy the virtual lab guests."""
@@ -529,6 +535,7 @@ class VirtLabCommand:
             rc = run(lab.postdestroy)
             if rc != 0:
                 die('post-destroy command failed: %s; rc=%d' % (lab.postdestroy, rc))
+        lab.vars.set('status', 'destroyed')
 
     def start(self):
         """Start the virtual lab guests."""
@@ -545,6 +552,7 @@ class VirtLabCommand:
         lab = VirtLabValues(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_start()
+        lab.vars.set('status', 'started')
 
     def stop(self):
         """Stop the virtual lab guests."""
@@ -561,6 +569,7 @@ class VirtLabCommand:
         lab = VirtLabValues(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_stop()
+        lab.vars.set('status', 'stopped')
 
     def list(self):
         """List virtual labs."""
@@ -582,8 +591,8 @@ class VirtLabCommand:
             else:
                 lab = VirtLabValues(name, self._args, self._config)
                 print('- name:', lab.name)
-                if lab.desc:
-                    print('  desc:', lab.desc)
+                print('  status:', lab.status if lab.status else '')
+                print('  desc:', lab.desc if lab.desc else '')
                 print('  guests:')
                 for guest in lab.guests():
                     print('  - %s: %s, %s' % (guest.name, guest.distro, guest.status))
