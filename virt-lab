@@ -147,14 +147,14 @@ def virsh(command, *options):
     return output
 
 
-class VirtLabFormatter(string.Formatter):
+class Formatter(string.Formatter):
     def __init__(self, lab):
         self.lab = lab
 
     def get_value(self, key, args, kwargs):
         return self.lab.get(key)
 
-class VirtLabVariables:
+class Variables:
     def __init__(self, path):
         self.path = path
         self.vars = {}
@@ -183,7 +183,7 @@ class VirtLabVariables:
         self.vars[name] = value
         self.save()
 
-class VirtLabValues:
+class Lab:
 
     def __init__(self, name, args, config):
         m = re.search(r'[^a-zA-Z0-9_]', name)
@@ -194,12 +194,12 @@ class VirtLabValues:
         self.values = {}
         self.args = args
         self.config = config
-        self.vars = VirtLabVariables(os.path.join(self.vardir, 'labs', self.name + '.json'))
+        self.vars = Variables(os.path.join(self.vardir, 'labs', self.name + '.json'))
 
     def guests(self):
         nguests = int(self.get('guests'))
         for number in range(1, nguests+1):
-            yield VirtLabGuest(self, number)
+            yield Guest(self, number)
 
     def __getattr__(self, name):
         value = self.get(name)
@@ -250,12 +250,12 @@ class VirtLabValues:
         return value
 
     def expand_string(self, value):
-        formatter = VirtLabFormatter(self)
+        formatter = Formatter(self)
         value = formatter.format(value)
         return value
 
 
-class VirtLabGuest:
+class Guest:
 
     def __init__(self, lab, number):
         self.dominfo = None
@@ -265,7 +265,7 @@ class VirtLabGuest:
         if name is None:
             name = lab.namefmt.format(lab=lab.name, guest=number)
         self.name = name
-        self.vars = VirtLabVariables(os.path.join(self.vardir, 'guests', self.name + '.json'))
+        self.vars = Variables(os.path.join(self.vardir, 'guests', self.name + '.json'))
 
     def __getattr__(self, name):
         if name == 'status':
@@ -431,7 +431,7 @@ class VirtLabGuest:
         return None
 
 
-class VirtLabCommand:
+class VirtLab:
 
     def __init__(self):
         self._command = ''
@@ -506,7 +506,7 @@ class VirtLabCommand:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self._args.name, self._args, self._config)
+        lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.create()
         if lab.postcreate:
@@ -528,7 +528,7 @@ class VirtLabCommand:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self._args.name, self._args, self._config)
+        lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.destroy(self._args.purge)
         if lab.postdestroy:
@@ -549,7 +549,7 @@ class VirtLabCommand:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self._args.name, self._args, self._config)
+        lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_start()
         lab.vars.set('status', 'started')
@@ -566,7 +566,7 @@ class VirtLabCommand:
         self._parse_args(parser)
         self._read_config()
 
-        lab = VirtLabValues(self._args.name, self._args, self._config)
+        lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_stop()
         lab.vars.set('status', 'stopped')
@@ -589,7 +589,7 @@ class VirtLabCommand:
             if self._args.brief:
                 print(name)
             else:
-                lab = VirtLabValues(name, self._args, self._config)
+                lab = Lab(name, self._args, self._config)
                 print('- name:', lab.name)
                 print('  status:', lab.status if lab.status else '')
                 print('  desc:', lab.desc if lab.desc else '')
@@ -613,4 +613,4 @@ class VirtLabCommand:
 
 
 if __name__ == '__main__':
-    VirtLabCommand().main()
+    VirtLab().main()
