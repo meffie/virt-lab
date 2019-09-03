@@ -268,12 +268,16 @@ class Guest:
         self.vars = Variables(os.path.join(self.vardir, 'guests', self.name + '.json'))
 
     def __getattr__(self, name):
-        if name == 'status':
-            return self.get_status()
         value = None
+        if name == 'status':
+            value = self.get_status()
+            self.status = value
         if name == 'mac':
             value = self.get_mac()
             self.mac = value
+        if name == 'ip':
+            value = self.get_ip_addr()
+            self.ip = value
         if value is None:
             value = self.get_cfg_value(name)
         if value is None:
@@ -296,6 +300,14 @@ class Guest:
         else:
             mac = self.vars.get('mac')
         return mac
+
+    def get_ip_addr(self):
+        lab = self.vars.get('lab')
+        if lab == self.lab.name:
+            ip = self.domain_ip_addr()
+        else:
+            ip = ''
+        return ip
 
     def get_cfg_value(self, name):
         try:
@@ -349,8 +361,9 @@ class Guest:
         rc = run(args)
         if rc != 0:
             die('Failed to create guest %s' % (self.name))
-        self.vars.set('mac', self.domain_mac_addr())
         self.vars.set('lab', self.lab.name)
+        self.vars.set('mac', self.domain_mac_addr())
+        self.vars.set('ip', self.domain_ip_addr())
 
     def destroy(self, purge):
         lab = self.vars.get('lab')
@@ -430,6 +443,20 @@ class Guest:
         trace('guest %s: mac not found' % self.name)
         return None
 
+    def domain_ip_addr(self):
+        """Attempt to find the ip address of this guest."""
+        # We peak into the libvirt file to find the ip address instead
+        # of using domifaddr, which is not ideal, but kvm_install_vm already
+        # retried until the ip address was written to the libvirt dnsmasq file.
+        with open('/var/lib/libvirt/dnsmasq/%s.status' % (self.bridge)) as f:
+            status = json.load(f)
+        for s in status:
+            if s['mac-address'] == self.mac:
+                ip = s['ip-address']
+                trace('guest %s has ip %s' % (self.name, ip))
+                return ip
+        trace('guest %s: ip not found' % self.name)
+        return None
 
 class VirtLab:
 
@@ -598,7 +625,7 @@ class VirtLab:
                 print('  desc:', lab.desc if lab.desc else '')
                 print('  guests:')
                 for guest in lab.guests():
-                    print('  - %s: %s, %s' % (guest.name, guest.distro, guest.status))
+                    print('  - %s: %s, %s, %s' % (guest.name, guest.distro, guest.status, guest.ip))
                 print()
 
     def main(self):
