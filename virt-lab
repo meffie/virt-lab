@@ -579,12 +579,15 @@ class VirtLab:
         parser.add_argument('-b', '--brief', action='store_true')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-c', '--config')
+        parser.add_argument('name', nargs='?')
         self._parse_args(parser)
         self._read_config()
 
         for section in self._config.sections():
             if '.' in section:
                 continue # skip subsections
+            if self._args.name and self._args.name != section:
+                continue # list only the named section
             name = section
             if self._args.brief:
                 print(name)
