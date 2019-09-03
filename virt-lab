@@ -28,6 +28,7 @@ import os
 import re
 import sys
 import string
+import json
 
 try:
     # python3
@@ -78,7 +79,7 @@ DEFAULTS = {
     'scriptname': None,
     'timezone': None,
     'user': None,
-    'vardir': '~/virt/var',
+    'vardir': '~/virt/vars',
     'vmdir': '~/virt/vms',
 }
 TEMPLATES = ('postcreate', 'postdestroy')
@@ -153,6 +154,34 @@ class VirtLabFormatter(string.Formatter):
     def get_value(self, key, args, kwargs):
         return self.lab.get(key)
 
+class VirtLabVariables:
+    def __init__(self, path):
+        self.path = path
+        self.vars = {}
+        self.load()
+
+    def load(self):
+        if os.path.exists(self.path):
+            with open(self.path) as f:
+                self.vars = json.load(f)
+
+    def save(self):
+        mkdirp(os.path.dirname(self.path))
+        with open(self.path, 'w') as f:
+            json.dump(self.vars, f)
+
+    def remove(self):
+        try:
+            os.unlink(self.path)
+        except:
+            pass
+
+    def get(self, name):
+        return self.vars.get(name, None)
+
+    def set(self, name, value):
+        self.vars[name] = value
+        self.save()
 
 class VirtLabValues:
 
@@ -231,6 +260,7 @@ class VirtLabGuest:
         if name is None:
             name = lab.namefmt.format(lab=lab.name, guest=number)
         self.name = name
+        self.vars = VirtLabVariables(os.path.join(self.vardir, 'guest', self.name + '.json'))
 
     def __getattr__(self, name):
         if name == 'status':
@@ -247,7 +277,7 @@ class VirtLabGuest:
         return value
 
     def get_status(self):
-        lab = self.read_var('lab')
+        lab = self.vars.get('lab')
         dominfo = self.domain_info()
         if dominfo and lab == self.lab.name:
             status = dominfo['State']
@@ -259,7 +289,7 @@ class VirtLabGuest:
         if self.domain_exists():
             mac = self.domain_mac_addr()
         else:
-            mac = self.read_var('mac')
+            mac = self.vars.get('mac')
         return mac
 
     def get_cfg_value(self, name):
@@ -272,7 +302,7 @@ class VirtLabGuest:
 
     def create(self):
         if self.domain_exists():
-            lab = self.read_var('lab')
+            lab = self.vars.get('lab')
             if lab and lab != self.lab.name:
                 warn('Skipping %s: domain already exists for lab %s.' % (self.name, lab))
             else:
@@ -314,20 +344,19 @@ class VirtLabGuest:
         rc = run(args)
         if rc != 0:
             die('Failed to create guest %s' % (self.name))
-        self.write_var('mac', self.domain_mac_addr())
-        self.write_var('lab', self.lab.name)
+        self.vars.set('mac', self.domain_mac_addr())
+        self.vars.set('lab', self.lab.name)
 
     def destroy(self, purge):
-        lab = self.read_var('lab')
+        lab = self.vars.get('lab')
         if lab and lab != self.lab.name:
             warn('Skipping %s: domain associated with lab %s.' % (self.name, lab))
             return
         info('destroying guest %s' % self.name)
         run(['kvm-install-vm', 'remove', self.name])
-        self.remove_var('lab')
+        self.vars.set('lab', None)
         if purge:
-            self.remove_var('mac')
-            self.remove_vardir()
+            self.vars.remove()
 
     def domain_info(self):
         if self.dominfo is None:
@@ -396,40 +425,8 @@ class VirtLabGuest:
         trace('guest %s: mac not found' % self.name)
         return None
 
-    def read_var(self, name):
-        value = None
-        try:
-            path = os.path.join(self.vardir, 'guest', self.name, name)
-            with open(path) as f:
-                value = f.read().strip()
-        except Exception:
-            pass
-        return value
 
-    def write_var(self, name, value):
-        if value is None:
-            return
-        path = os.path.join(self.vardir, 'guest', self.name, name)
-        mkdirp(os.path.dirname(path))
-        with open(path, 'w') as f:
-            f.write('%s\n' % value)
-
-    def remove_var(self, name):
-        path = os.path.join(self.vardir, 'guest', self.name, name)
-        try:
-            os.unlink(path)
-        except:
-            pass
-
-    def remove_vardir(self):
-        path = os.path.join(self.vardir, 'guest', self.name)
-        try:
-            os.rmdir(path)
-        except:
-            pass
-
-
-class VirtLab:
+class VirtLabCommand:
 
     def __init__(self):
         self._command = ''
@@ -607,4 +604,4 @@ class VirtLab:
 
 
 if __name__ == '__main__':
-    VirtLab().main()
+    VirtLabCommand().main()
