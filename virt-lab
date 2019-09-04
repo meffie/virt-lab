@@ -291,7 +291,7 @@ class Guest:
         if dominfo and lab == self.lab.name:
             status = dominfo['State']
         else:
-            status = 'undefined'
+            status = ''
         return status
 
     def get_mac(self):
@@ -617,16 +617,23 @@ class VirtLab:
                 continue # list only the named section
             name = section
             if self._args.brief:
-                print(name)
+                sys.stdout.write('%s\n' % name)
             else:
                 lab = Lab(name, self._args, self._config)
-                print('- name:', lab.name)
-                print('  status:', lab.status if lab.status else '')
-                print('  desc:', lab.desc if lab.desc else '')
-                print('  guests:')
+                sys.stdout.write('- name: %s\n' % lab.name)
+                sys.stdout.write('  status: %s\n' % (lab.status if lab.status else ''))
+                sys.stdout.write('  desc: %s\n' % (lab.desc if lab.desc else ''))
+                sys.stdout.write('  guests:\n')
                 for guest in lab.guests():
-                    print('  - %s: %s, %s, %s' % (guest.name, guest.distro, guest.status, guest.ip))
-                print()
+                    sys.stdout.write('    - name=%s' % guest.name)
+                    if guest.status:
+                        sys.stdout.write(', status=%s' % guest.status)
+                    if guest.distro:
+                        sys.stdout.write(', distro=%s' % guest.distro)
+                    if guest.ip:
+                        sys.stdout.write(', ip=%s' % guest.ip)
+                    sys.stdout.write('\n')
+                sys.stdout.write('\n')
 
     def main(self):
         """Main return for virt-lab"""
