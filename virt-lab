@@ -191,7 +191,6 @@ class Lab:
         if m:
             die('Invalid lab name.')
         self.name = name
-        self.lab = name # alias
         self.values = {}
         self.args = args
         self.config = config
