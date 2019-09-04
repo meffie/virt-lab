@@ -2,7 +2,13 @@
 # Example virt-lab configuration.
 #
 
+[.global]
+# Example common options.
+key = ~/.ssh/mydefaultkey.pub
+postcreate = systemd-resolve --interface {bridge} --set-dns {gateway} --set-domain {domain}
+
 [test]
+# Options for the test guests.
 desc = My test environment
 guests = 5
 distro = centos7
@@ -10,14 +16,18 @@ key =  ~/.ssh/mykey.pub
 domain = example.com
 bridge = virbr0
 gateway = 192.168.122.1
-postcreate = systemd-resolve --interface {bridge} --set-dns {gateway} --set-domain {domain}
 
 [dev]
+# Options for the dev guests.
 desc = Guests for development
-distro = debian
+distro = centos7
 images = 4
-postcreate = ansible-playbook xyzzy.yaml
+postcreate = {scriptdir}/postcreate.sh
+postdestroy = {scriptdir}/postdestroy.sh
 
 [dev.1]
-distro = centos6
+# Options for the first dev guest.
+distro = ubuntu1804
 disksize = 20
+# Run this script on the guest on first boot.
+scriptname = {scriptdir}/apt-install-python.sh

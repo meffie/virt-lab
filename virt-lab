@@ -259,6 +259,35 @@ class Lab:
         value = formatter.format(value)
         return value
 
+    def print(self):
+        sys.stdout.write('- name: %s\n' % self.name)
+        sys.stdout.write('  status: %s\n' % (self.status if self.status else ''))
+        sys.stdout.write('  desc: %s\n' % (self.desc if self.desc else ''))
+        sys.stdout.write('  guests:\n')
+        for guest in self.guests():
+            sys.stdout.write('    - name=%s' % guest.name)
+            if guest.status:
+                sys.stdout.write(', status=%s' % guest.status)
+            if guest.distro:
+                sys.stdout.write(', distro=%s' % guest.distro)
+            if guest.ip:
+                sys.stdout.write(', ip=%s' % guest.ip)
+            sys.stdout.write('\n')
+        sys.stdout.write('\n')
+
+    def inventory(self):
+        inventory = {
+            '_meta': {'hostvars': {}},
+            'all': {'children': ['ungrouped']},
+            'ungrouped': {'hosts': []}
+        }
+        for guest in self.guests():
+            hostname = '%s.%s' % (guest.name, self.domain)
+            inventory['_meta']['hostvars'][hostname] = {}
+            #if guest.ip:
+            #    inventory['_meta']['hostvars'][hostname]['ansible_host'] = guest.ip
+            inventory['ungrouped']['hosts'].append(hostname)
+        return inventory
 
 class Guest:
 
@@ -606,12 +635,15 @@ class VirtLab:
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.list.__doc__)
-        parser.add_argument('-f', '--format', choices=['brief', 'yaml'], default='text')
+        parser.add_argument('-f', '--format', choices=['brief', 'yaml', 'inventory'], default='text')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-c', '--config')
         parser.add_argument('name', nargs='?')
         self._parse_args(parser)
         self._read_config()
+
+        if self._args.format == 'inventory' and not self._args.name:
+            die('Please specify a name for the inventory format')
 
         for section in self._config.sections():
             if '.' in section:
@@ -623,20 +655,10 @@ class VirtLab:
                 sys.stdout.write('%s\n' % name)
             else:
                 lab = Lab(name, self._args, self._config)
-                sys.stdout.write('- name: %s\n' % lab.name)
-                sys.stdout.write('  status: %s\n' % (lab.status if lab.status else ''))
-                sys.stdout.write('  desc: %s\n' % (lab.desc if lab.desc else ''))
-                sys.stdout.write('  guests:\n')
-                for guest in lab.guests():
-                    sys.stdout.write('    - name=%s' % guest.name)
-                    if guest.status:
-                        sys.stdout.write(', status=%s' % guest.status)
-                    if guest.distro:
-                        sys.stdout.write(', distro=%s' % guest.distro)
-                    if guest.ip:
-                        sys.stdout.write(', ip=%s' % guest.ip)
-                    sys.stdout.write('\n')
-                sys.stdout.write('\n')
+                if self._args.format == 'yaml':
+                    lab.print()
+                elif self._args.format == 'inventory':
+                    json.dump(lab.inventory(), sys.stdout)
 
     def main(self):
         """Main return for virt-lab"""
