@@ -81,9 +81,10 @@ DEFAULTS = {
     'user': None,
     'vardir': '~/virt/vars',
     'vmdir': '~/virt/vms',
+    'scriptdir': '~/virt/scripts',
 }
 TEMPLATES = ('postcreate', 'postdestroy')
-PATHNAMES = ('key', 'imagedir', 'scriptname', 'vmdir', 'vardir')
+PATHNAMES = ('key', 'imagedir', 'scriptname', 'vmdir', 'vardir', 'scriptdir', 'postcreate', 'postdestroy')
 
 def trace(msg):
     if verbose:
