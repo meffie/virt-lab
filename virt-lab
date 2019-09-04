@@ -195,6 +195,11 @@ class Lab:
         self.args = args
         self.config = config
         self.vars = Variables(os.path.join(self.vardir, 'labs', self.name + '.json'))
+        # Set env variables for external commands.
+        os.environ['VIRTLAB_NAME'] = self.name
+        for key in DEFAULTS.keys():
+            value = self.get(key)
+            os.environ['VIRTLAB_' + key.upper()] = str(value) if value else ''
 
     def guests(self):
         nguests = int(self.get('guests'))
