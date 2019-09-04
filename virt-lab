@@ -531,9 +531,7 @@ class VirtLab:
         parser.add_argument('-n', '--dryrun', action='store_true')
         parser.add_argument('-c', '--config')
         for key in sorted(DEFAULTS.keys()):
-            if isinstance(DEFAULTS[key], bool):
-                parser.add_argument('--'+key, action='store_true')
-            else:
+            if not isinstance(DEFAULTS[key], bool):
                 parser.add_argument('--'+key)
         self._parse_args(parser)
         self._read_config()
