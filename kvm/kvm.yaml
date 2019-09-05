@@ -4,7 +4,7 @@
 #
 # Usage:
 #    ansible-galaxy install -r requirements.yaml
-#    ansible-playbook virtlab.yaml
+#    ansible-playbook kvm.yaml
 #
 - hosts: localhost
   vars:

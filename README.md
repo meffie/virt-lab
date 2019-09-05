@@ -25,7 +25,7 @@ Torres to download and install the cloud-init images.
       
       Install and remove sets of guests on a local hypervisor using cloud-init images.
 
-## Setup
+## Prereqs
 
 A local KVM hypervisor must be installed and running along with a few other
 tools.
@@ -37,40 +37,8 @@ tools.
 * `qemu-img`
 * `libvirt-client`
 
-Download the [`kvm-install-vm`][1] from github.com.  Distribution packages are
-not available at this time.
-
-### Setup playbook
-
-An Ansible playbook to install the KVM hypervisor and the required tools is
-provided in the playbooks directory. This should be run as a regular user on the
-local machine.  The required role to run this playbook are listed in the
-`requirements.yaml` file so you can install the with `ansible-galaxy`.
-
-The run the playbook:
-
-    $ cd playbooks
-    $ ansible-galaxy install -r requirements.yaml
-    $ ansible-playbook virtlab.yaml
-
-After running the play book, be sure to log out and then back it to your linux
-session in order to join the newly created libvirt user groups. Verify you have
-access by running the `virsh list` command.
-
-### Guest hostname resolution
-
-Systemd based systems can be configured to use the local resolver to resolve
-guests by hostname instead of needing to ssh to them by IP address.
-
-1. Configure a libvirt network which uses an external nameserver instead if
-   local resolution. This is needed to avoid resolution looping between the
-   libvirt dnsmasq and the local resolver. Such a network will be configured
-   by the Ansible playbook in the `playbooks` directory.
-
-2. Each time guests have been installed, run the `systemd-resolve` command as a
-   regular user to set the dns gateway for the virtual bridge. This can be done
-   by providing a `postinstall` command in the `virt-lab` configuration file. See
-   the `virt-lab.cfg.example` file the `systemd-resolve` command syntax.
+An Ansible playbook to install the local KVM hypervisor and required tools is
+provided in the `kvm` directory.
 
 ### Ubuntu notes
 
