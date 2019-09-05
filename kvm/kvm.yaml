@@ -61,22 +61,6 @@
       notify:
         - logout required
 
-    - file:
-        state: directory
-        path:  "{{ ansible_facts['user_dir'] }}/.ansible/repos"
-
-    - git:
-        repo: https://github.com/giovtorres/kvm-install-vm.git
-        dest:  "{{ ansible_facts['user_dir'] }}/.ansible/repos/kvm-install-vm"
-
-    - name: Install kvm-install-vm script
-      become: true
-      copy:
-        src: "{{ ansible_facts['user_dir'] }}/.ansible/repos/kvm-install-vm/kvm-install-vm"
-        dest: /usr/local/bin/kvm-install-vm
-        remote_src: yes
-        mode: '0755'
-
   handlers:
     - name: logout required
       pause:

@@ -8,7 +8,8 @@ MAC addresses assigned to guests are saved and reused for the next generation.
 testing or development on your local hypervisor.
 
 `virt-lab` is requires the [`kvm-install-vm`][1] shell script by Giovanni
-Torres to download and install the cloud-init images.
+Torres to download and install the cloud-init images. `kvm-install-vm` is
+included in this repo within git submodule.
 
 ## Usage
 
@@ -30,7 +31,6 @@ Torres to download and install the cloud-init images.
 A local KVM hypervisor must be installed and running along with a few other
 tools.
 
-* [`kvm-install-vm`][1]
 * `virt-install`
 * `genisoimage` or `mkisofs`
 * `libguestfs-tools-c`
