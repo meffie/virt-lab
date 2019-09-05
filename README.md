@@ -26,31 +26,33 @@ included in this repo within git submodule.
       
       Install and remove sets of guests on a local hypervisor using cloud-init images.
 
-## Prereqs
+## KVM
 
-A local KVM hypervisor must be installed and running along with a few other
-tools.
+A local KVM hypervisor must be installed and running along with `libvirt`. An
+Ansible playbook to install the local KVM hypervisor and required tools is
+provided in the `kvm` directory.  Be sure you are able to connect to the
+locally running libvirt daemon, e.g. `virsh list --all` before proceeding.
 
-* `virt-install`
-* `genisoimage` or `mkisofs`
-* `libguestfs-tools-c`
-* `qemu-img`
-* `libvirt-client`
+It is also possible to use Xen as a local hypervisor. See the "Advanced"
+`kvm-install-vm` configuration options.
 
-An Ansible playbook to install the local KVM hypervisor and required tools is
-provided in the `kvm` directory.
+## Installation
 
-### Ubuntu notes
+The `virt-lab` program and related files can be installed with:
 
-Recent versions of [Ubuntu][2] have made the linux images unreadable by regular
-users, which breaks the the ability of non-root users to use libguestfs to
-modify images.  In order to fix this you'll need to override the file
-permission settings for the linux kernel images on ubuntu.
+    make install
 
-This can be done with the `dpkg-stateoverride` command.  This will need to be
-done each time the kernel is upgraded.
+## Ubuntu notes
+
+[Ubuntu][2] distributes the linux images as unreadable by regular users. This
+breaks the ability of libguestfs to modify guest images, unless running as
+root.  In order to fix this, you will need to override the file permission
+settings for the linux kernel images on Ubuntu, which can be done with the
+`dpkg-stateoverride` command.
 
     $ sudo dpkg-statoverride --add root root 0644 /boot/vmlinux-$(uname -r) --update
+
+This will need to be done each time the kernel is upgraded.
 
 ## Configuration
 
