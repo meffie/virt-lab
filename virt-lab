@@ -635,7 +635,7 @@ class VirtLab:
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.list.__doc__)
-        parser.add_argument('-f', '--format', choices=['brief', 'yaml', 'inventory'], default='text')
+        parser.add_argument('-f', '--format', choices=['brief', 'yaml', 'inventory'], default='yaml')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-c', '--config')
         parser.add_argument('name', nargs='?')
