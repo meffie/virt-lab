@@ -1,0 +1,3 @@
+[submodule "kvm-install-vm"]
+	path = kvm-install-vm
+	url = https://github.com/giovtorres/kvm-install-vm
