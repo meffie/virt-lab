@@ -97,6 +97,8 @@ Option names are:
 | imagedir   | image directory           | `$HOME/virt/images` |
 | vardir     | guest data directory      | `$HOME/virt/var` |
 | vmdir      | data directory            | `$HOME/virt/vms` |
+| scriptdir  | custom script directory   | `$HOME/virt/scripts` |
+| playbookdir | Ansible playbooks        | `$HOME/virt/playbooks` |
 
 
 ## Distributions

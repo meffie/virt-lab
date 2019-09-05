@@ -45,6 +45,7 @@ verbose = False
 dryrun = False
 
 VERSION = '1.0'
+VIRTDIR = '~/virt'
 DESC  = 'Install and remove sets of guests on a local hypervisor using cloud-init images.'
 USAGE = '''\
 virt-lab [<options>] <command> [<name>]
@@ -79,12 +80,14 @@ DEFAULTS = {
     'scriptname': None,
     'timezone': None,
     'user': None,
-    'vardir': '~/virt/vars',
-    'vmdir': '~/virt/vms',
-    'scriptdir': '~/virt/scripts',
+    'vardir': VIRTDIR + '/vars',
+    'vmdir': VIRTDIR + '/vms',
+    'scriptdir': VIRTDIR + '/scripts',
+    'playbookdir': VIRTDIR + '/playbooks',
 }
 TEMPLATES = ('postcreate', 'postdestroy')
-PATHNAMES = ('key', 'imagedir', 'scriptname', 'vmdir', 'vardir', 'scriptdir', 'postcreate', 'postdestroy')
+PATHNAMES = ('key', 'imagedir', 'scriptname', 'vmdir', 'vardir',
+             'scriptdir', 'playbookdir', 'postcreate', 'postdestroy')
 
 def trace(msg):
     if verbose:
