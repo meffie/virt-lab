@@ -537,13 +537,16 @@ class Guest:
         # We peak into the libvirt file to find the ip address instead
         # of using domifaddr, which is not ideal, but kvm_install_vm already
         # retried until the ip address was written to the libvirt dnsmasq file.
-        with open('/var/lib/libvirt/dnsmasq/%s.status' % (self.bridge)) as f:
-            status = json.load(f)
-        for s in status:
-            if s['mac-address'] == self.mac:
-                ip = s['ip-address']
-                trace('guest %s has ip %s' % (self.name, ip))
-                return ip
+        try:
+            with open('/var/lib/libvirt/dnsmasq/%s.status' % (self.bridge)) as f:
+                status = json.load(f)
+            for s in status:
+                if s['mac-address'] == self.mac:
+                    ip = s['ip-address']
+                    trace('guest %s has ip %s' % (self.name, ip))
+                    return ip
+        except FileNotFoundError:
+            pass
         trace('guest %s: ip not found' % self.name)
         return None
 
