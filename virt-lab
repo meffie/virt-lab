@@ -133,6 +133,36 @@ def run(args):
     rc = os.system(cmdline)
     return rc
 
+def parse_sequence(s):
+    """Parse a string containing a sequence of numbers, ignoring
+    white space and expanding ranges in the form of <a>..<b>.
+
+    Examples:
+       ''       -> []
+       '1'      -> [1]
+       '1,2,3'  -> [1, 2, 3]
+       '1..3'   -> [1, 2, 3]
+       '1,2..3' -> [1, 2, 3]
+       '2,2'    -> [2]
+    """
+    seq = []
+    for f in s.split(','):
+        f = f.strip()
+        if not f:
+            continue
+        m = re.match(r'(\d+)$', f)
+        if m:
+            seq.append(int(m.group(1)))
+            continue
+        m = re.match(r'(\d+)\s*(\.\.|:|-)\s*(\d+)$', f)
+        if m:
+            a = int(m.group(1))
+            b = int(m.group(3))
+            if a <= b:
+                seq.extend(list(range(a, b+1)))
+                continue
+        raise ValueError('Invalid sequence value: "%s"' % f)
+    return sorted(set(seq))
 
 class VirshError(Exception):
     pass
@@ -279,17 +309,36 @@ class Lab:
         sys.stdout.write('\n')
 
     def inventory(self):
-        inventory = {
-            '_meta': {'hostvars': {}},
-            'all': {'children': ['ungrouped']},
-            'ungrouped': {'hosts': []}
-        }
+        """Generate an ansible dynamic inventory for this lab."""
+
+        inventory = {}
+        guests = {}
         for guest in self.guests():
-            hostname = '%s.%s' % (guest.name, self.domain)
-            inventory['_meta']['hostvars'][hostname] = {}
+            guests[guest.number] = guest.hostname
+
+        # Expand the host groups subsection, if one.
+        groups = {}
+        grouped = set()
+        if self.config.has_section(self.name + '.groups'):
+            for name,value in self.config.items(self.name + '.groups'):
+                if value == '*': # expand wildcard
+                    value = '1..%d' % len(guests)
+                groups[name] = [guests[i] for i in parse_sequence(value)]
+                grouped.update(groups[name])
+        groups['ungrouped'] = list(set(guests.values()) - grouped)
+
+        # Set our host groups.
+        for name in groups:
+            inventory[name] = {'hosts': groups[name] }
+        inventory['all'] = {'children': list(groups.keys()) }
+
+        # Set our host vars.
+        inventory['_meta'] = {'hostvars': {}}
+        for guest in self.guests():
+            inventory['_meta']['hostvars'][guest.hostname] = {}
             #if guest.ip:
             #    inventory['_meta']['hostvars'][hostname]['ansible_host'] = guest.ip
-            inventory['ungrouped']['hosts'].append(hostname)
+
         return inventory
 
 class Guest:
@@ -315,6 +364,9 @@ class Guest:
         if name == 'ip':
             value = self.get_ip_addr()
             self.ip = value
+        if name == 'hostname':
+            value = '%s.%s' % (self.name, self.domain)
+            self.hostname = value
         if value is None:
             value = self.get_cfg_value(name)
         if value is None:
