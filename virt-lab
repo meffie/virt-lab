@@ -44,7 +44,7 @@ except ImportError:
 verbose = False
 dryrun = False
 
-VERSION = '1.0'
+VERSION = 'v0.8'
 VIRTDIR = '~/virt'
 DESC  = 'Install and remove sets of guests on a local hypervisor using cloud-init images.'
 USAGE = '''\
