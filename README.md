@@ -40,7 +40,7 @@ It is also possible to use Xen as a local hypervisor. See the "Advanced"
 
 The `virt-lab` program and related files can be installed with:
 
-    make install
+    make update install
 
 ## Ubuntu notes
 

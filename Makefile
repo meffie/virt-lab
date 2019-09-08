@@ -4,13 +4,19 @@ PACKAGE=virt
 BINDIR=$(HOME)/.local/bin
 DATADIR=$(HOME)
 
+.PHONY: help update install install-kvm
+
 help:
 	@echo "usage: make <target>"
-	@echo "  install        install virt-lab"
+	@echo "  update          update git submodules"
+	@echo "  install         install virt-lab"
+	@echo "  install-kvm     run playbook to install kvm"
 
-install:
+update:
 	git submodule init
 	git submodule update
+
+install: update
 	install -d $(DATADIR)/$(PACKAGE)
 	install -d $(DATADIR)/$(PACKAGE)/scripts
 	install -d $(DATADIR)/$(PACKAGE)/playbooks
