@@ -20,6 +20,7 @@ included in this repo within git submodule.
         destroy <name>    destroy a set of guests
         start <name>      start a set of guests
         stop <name>       shutdown a set of guests
+        inventory <name>  ansisble dynamic inventory
         list              list guest sets
         help              show help
         version           show version
