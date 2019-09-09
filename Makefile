@@ -19,9 +19,9 @@ update:
 install: update
 	install -d $(DATADIR)/$(PACKAGE)
 	install -d $(DATADIR)/$(PACKAGE)/scripts
-	install -d $(DATADIR)/$(PACKAGE)/playbooks
 	install scripts/* $(DATADIR)/$(PACKAGE)/scripts
-	install playbooks/* $(DATADIR)/$(PACKAGE)/playbooks
+	install -d $(DATADIR)/$(PACKAGE)/playbooks
+	install -m 644 playbooks/* $(DATADIR)/$(PACKAGE)/playbooks
 	install -d $(BINDIR)
 	install virt-lab $(BINDIR)
 	install kvm-install-vm/kvm-install-vm $(BINDIR)
