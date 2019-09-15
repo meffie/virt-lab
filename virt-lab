@@ -713,6 +713,7 @@ class VirtLab:
             prog=self._progname(),
             description=self.list.__doc__)
         parser.add_argument('-v', '--verbose', action='store_true')
+        parser.add_argument('-b', '--brief', action='store_true')
         parser.add_argument('-a', '--active', action='store_true')
         parser.add_argument('--no-heading', action='store_true')
         parser.add_argument('-c', '--config')
@@ -724,11 +725,16 @@ class VirtLab:
                 s = ''
             return s
 
-        out = sys.stdout
+        heading = not self._args.no_heading
+        brief = self._args.brief
         sep = '-' * 12
-        if not self._args.no_heading:
-            out.write('%-12s %-12s %s\n' % ('name', 'status', 'description'))
-            out.write('%-12s %-12s %s\n' % (sep, sep, sep))
+        if heading:
+            if brief:
+                print('name')
+                print('----')
+            else:
+                print('%-12s %-12s %s' % ('name', 'status', 'description'))
+                print('%-12s %-12s %s' % (sep, sep, sep))
         for section in self._config.sections():
             if '.' in section:
                 continue # skip subsections
@@ -736,7 +742,10 @@ class VirtLab:
             lab = Lab(name, self._args, self._config)
             if self._args.active and lab.status != 'active':
                 continue # skip inactive when --active is given
-            out.write('%-12s %-12s %s\n' % (lab.name, lab.status, escape(lab.desc)))
+            if brief:
+                print(lab.name)
+            else:
+                print('%-12s %-12s %s' % (lab.name, lab.status, escape(lab.desc)))
 
     def inventory(self):
         """Ansible dynamic inventory."""
