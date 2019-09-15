@@ -51,10 +51,11 @@ USAGE = '''\
 virt-lab [<options>] <command> [<name>]
 
 Commands:
-  create <name>     create a set of guests
-  destroy <name>    destroy a set of guests
-  start <name>      start a set of guests
-  stop <name>       shutdown a set of guests
+  create <name>     create guests
+  destroy <name>    destroy guests
+  start <name>      start guests
+  stop <name>       shutdown guests
+  info <name>       show lab and guest status
   inventory <name>  ansible dynamic inventory
   list              list guest sets
   help              show help
@@ -695,6 +696,32 @@ class VirtLab:
         for guest in lab.guests():
             guest.domain_stop()
         lab.vars.set('status', 'inactive')
+
+    def info(self):
+        """Show virtual lab and guest info."""
+        parser = argparse.ArgumentParser(
+            prog=self._progname(),
+            description=self.list.__doc__)
+        parser.add_argument('name')
+        self._parse_args(parser)
+        self._read_config()
+
+        out = sys.stdout
+        lab = Lab(self._args.name, self._args, self._config)
+        out.write('name: %s\n' % lab.name)
+        out.write('status: %s\n' % lab.status)
+        if lab.desc:
+            out.write('desc: %s\n' % lab.desc)
+        out.write('guests:\n')
+        for guest in lab.guests():
+            out.write('  - {name:%s' % guest.name)
+            if guest.status:
+                out.write(', status:%s' % guest.status)
+            if guest.distro:
+                out.write(', distro:%s' % guest.distro)
+            if guest.ip:
+                out.write(', ip:%s' % guest.ip)
+            out.write('}\n')
 
     def list(self):
         """List virtual labs."""
