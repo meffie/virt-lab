@@ -713,6 +713,7 @@ class VirtLab:
             prog=self._progname(),
             description=self.list.__doc__)
         parser.add_argument('-v', '--verbose', action='store_true')
+        parser.add_argument('-a', '--active', action='store_true')
         parser.add_argument('-c', '--config')
         self._parse_args(parser)
         self._read_config()
@@ -731,6 +732,8 @@ class VirtLab:
                 continue # skip subsections
             name = section
             lab = Lab(name, self._args, self._config)
+            if self._args.active and lab.status != 'active':
+                continue # skip inactive when --active is given
             out.write('%-12s %-12s %s\n' % (lab.name, lab.status, escape(lab.desc)))
 
     def inventory(self):
