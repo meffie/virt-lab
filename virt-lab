@@ -301,22 +301,6 @@ class Lab:
         value = formatter.format(value)
         return value
 
-    def print(self):
-        sys.stdout.write('- name: %s\n' % self.name)
-        sys.stdout.write('  status: %s\n' % (self.status if self.status else ''))
-        sys.stdout.write('  desc: %s\n' % (self.desc if self.desc else ''))
-        sys.stdout.write('  guests:\n')
-        for guest in self.guests():
-            sys.stdout.write('    - name=%s' % guest.name)
-            if guest.status:
-                sys.stdout.write(', status=%s' % guest.status)
-            if guest.distro:
-                sys.stdout.write(', distro=%s' % guest.distro)
-            if guest.ip:
-                sys.stdout.write(', ip=%s' % guest.ip)
-            sys.stdout.write('\n')
-        sys.stdout.write('\n')
-
     def inventory(self):
         """Generate an ansible dynamic inventory for this lab."""
 
@@ -728,30 +712,26 @@ class VirtLab:
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.list.__doc__)
-        parser.add_argument('-f', '--format', choices=['brief', 'yaml', 'inventory'], default='yaml')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-c', '--config')
-        parser.add_argument('name', nargs='?')
         self._parse_args(parser)
         self._read_config()
 
-        if self._args.format == 'inventory' and not self._args.name:
-            die('Please specify a name for the inventory format')
+        def escape(s):
+            if s is None:
+                s = ''
+            return s
 
+        out = sys.stdout
+        sep = '-' * 12
+        out.write('%-12s %-12s %s\n' % ('name', 'status', 'description'))
+        out.write('%-12s %-12s %s\n' % (sep, sep, sep))
         for section in self._config.sections():
             if '.' in section:
                 continue # skip subsections
-            if self._args.name and self._args.name != section:
-                continue # list only the named section
             name = section
-            if self._args.format == 'brief':
-                sys.stdout.write('%s\n' % name)
-            else:
-                lab = Lab(name, self._args, self._config)
-                if self._args.format == 'yaml':
-                    lab.print()
-                elif self._args.format == 'inventory':
-                    json.dump(lab.inventory(), sys.stdout)
+            lab = Lab(name, self._args, self._config)
+            out.write('%-12s %-12s %s\n' % (lab.name, lab.status, escape(lab.desc)))
 
     def inventory(self):
         """Ansible dynamic inventory."""
