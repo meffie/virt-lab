@@ -714,6 +714,7 @@ class VirtLab:
             description=self.list.__doc__)
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-a', '--active', action='store_true')
+        parser.add_argument('--no-heading', action='store_true')
         parser.add_argument('-c', '--config')
         self._parse_args(parser)
         self._read_config()
@@ -725,8 +726,9 @@ class VirtLab:
 
         out = sys.stdout
         sep = '-' * 12
-        out.write('%-12s %-12s %s\n' % ('name', 'status', 'description'))
-        out.write('%-12s %-12s %s\n' % (sep, sep, sep))
+        if not self._args.no_heading:
+            out.write('%-12s %-12s %s\n' % ('name', 'status', 'description'))
+            out.write('%-12s %-12s %s\n' % (sep, sep, sep))
         for section in self._config.sections():
             if '.' in section:
                 continue # skip subsections
