@@ -250,9 +250,9 @@ class Lab:
         return self.values[name]
 
     def get_value(self, name):
-        value = None
         if name == 'status':
-            value = self.vars.get('status')
+            return self.get_status()
+        value = None
         if value is None:
             value = self.get_arg_value(name)
         if value is None:
@@ -267,6 +267,13 @@ class Lab:
             if name in PATHNAMES:
                 value = os.path.expanduser(value)
         return value
+
+    def get_status(self):
+        status = self.vars.get('status')
+        if status is None:
+            status = 'inactive'
+            self.vars.set('status', status)
+        return status
 
     def get_arg_value(self, name):
         return getattr(self.args, name, None)
@@ -631,7 +638,7 @@ class VirtLab:
             rc = run(lab.postcreate)
             if rc != 0:
                 die('post-create command failed: %s; rc=%d' % (lab.postcreate, rc))
-        lab.vars.set('status', 'created')
+        lab.vars.set('status', 'active')
 
     def destroy(self):
         """Destroy the virtual lab guests."""
@@ -653,7 +660,7 @@ class VirtLab:
             rc = run(lab.postdestroy)
             if rc != 0:
                 die('post-destroy command failed: %s; rc=%d' % (lab.postdestroy, rc))
-        lab.vars.set('status', 'destroyed')
+        lab.vars.set('status', 'inactive')
 
     def start(self):
         """Start the virtual lab guests."""
@@ -670,7 +677,7 @@ class VirtLab:
         lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_start()
-        lab.vars.set('status', 'started')
+        lab.vars.set('status', 'active')
 
     def stop(self):
         """Stop the virtual lab guests."""
@@ -687,7 +694,7 @@ class VirtLab:
         lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_stop()
-        lab.vars.set('status', 'stopped')
+        lab.vars.set('status', 'inactive')
 
     def list(self):
         """List virtual labs."""
