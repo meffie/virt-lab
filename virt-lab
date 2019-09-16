@@ -296,6 +296,16 @@ class Lab:
             value = None
         return value
 
+    def get_values(self):
+        values = {}
+        if self.config.has_section('.global'):
+            for name,value in self.config.items('.global'):
+                values[name] = value
+        if self.config.has_section(self.name):
+            for name,value in self.config.items(self.name):
+                values[name] = value
+        return values
+
     def expand_string(self, value):
         formatter = Formatter(self)
         value = formatter.format(value)
@@ -305,24 +315,39 @@ class Lab:
         """Generate an ansible dynamic inventory for this lab."""
 
         inventory = {}
-        guests = {}
+
+        # Get a list of guest hostnames by guest number.
+        guests = {} # key: guest number 1 to n, value: guest hostname
         for guest in self.guests():
             guests[guest.number] = guest.hostname
 
-        # Expand the host groups subsection, if one.
-        groups = {}
-        grouped = set()
-        if self.config.has_section(self.name + '.groups'):
-            for name,value in self.config.items(self.name + '.groups'):
-                if value == '*': # expand wildcard
-                    value = '1..%d' % len(guests)
-                groups[name] = [guests[i] for i in parse_sequence(value)]
-                grouped.update(groups[name])
-        groups['ungrouped'] = list(set(guests.values()) - grouped)
+        # Convert the group host number ranges to lists of hostnames.
+        groups = {}     # key: group name, value: list of guest hostnames
+        grouped = set() # any hosts not grouped will be placed in the ungrouped list
+        for name,value in self.get_values().items():
+            if not name.startswith('group.'):
+                continue # skip regular options
+            name = name.replace('group.', '', 1)
+            if name in ('all', 'ungrouped'):
+                raise ValueError('Unable to use reserved group name "%s"' % (name))
+            if value == '*': # expand wildcard
+                value = '1..%d' % len(guests)
+            groups[name] = []
+            for i in parse_sequence(value):
+                if not i in guests:
+                    raise ValueError('Guest number %d is out of range in option "%s".' % (i, 'group.'+name))
+                groups[name].append(guests[i])
+            grouped.update(groups[name])
 
-        # Set our host groups.
+        # Any left over go into the special "ungrouped" group.
+        ungrouped = set(guests.values()) - grouped
+        groups['ungrouped'] = list(ungrouped)
+
+        # Set our host groups in the inventory, including "ungrouped".
         for name in groups:
             inventory[name] = {'hosts': groups[name] }
+
+        # Set the group names as children of the special "all" group.
         inventory['all'] = {'children': list(groups.keys()) }
 
         # Set our host vars.
