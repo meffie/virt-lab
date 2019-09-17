@@ -41,6 +41,12 @@ except ImportError:
     from ConfigParser import NoSectionError
     from ConfigParser import NoOptionError
 
+PY3 = sys.version_info[0] == 3
+if PY3:
+    string_types = str,
+else:
+    string_types = basestring,
+
 verbose = False
 dryrun = False
 
@@ -87,7 +93,7 @@ DEFAULTS = {
     'scriptdir': VIRTDIR + '/scripts',
     'playbookdir': VIRTDIR + '/playbooks',
 }
-TEMPLATES = ('postcreate', 'postdestroy')
+
 PATHNAMES = ('key', 'imagedir', 'scriptname', 'vmdir', 'vardir',
              'scriptdir', 'playbookdir', 'postcreate', 'postdestroy')
 
@@ -262,10 +268,11 @@ class Lab:
             value = self.get_global_value(name)
         if value is None:
             value = DEFAULTS.get(name, None)
-        if value is not None:
-            if hasattr(value, 'replace'):
-                value = value.replace('\n',' ').replace('\r',' ')
-            if name in TEMPLATES:
+        if value is None:
+            value = ''
+        if isinstance(value, string_types):
+            value = value.replace('\n',' ').replace('\r',' ')
+            if name != 'namefmt': # Do not expand this format string.
                 value = self.expand_string(value)
             if name in PATHNAMES:
                 value = os.path.expanduser(value)
@@ -454,7 +461,7 @@ class Guest:
                 args.append(switch)
 
         def opt(switch, value):
-            if value is not None:
+            if value:
                 args.append(switch)
                 args.append(value)
 
