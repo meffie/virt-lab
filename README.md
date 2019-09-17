@@ -1,8 +1,10 @@
 # Virtual Linux Lab
 
-Install sets of virtual guests on a local KVM hypervisor with cloud-init
-images. Guest sets, called **labs**, are defined in a configuration file.  The
-MAC addresses assigned to guests are saved and reused for the next generation.
+Install virtual machines on a local KVM hypervisor with cloud-init images, and
+then optionally run Ansible [playbooks](playbooks/README.md) to configure the
+new guests. Guest sets, called **labs**, are defined in an INI-style
+configuration file.  MAC addresses assigned to guests are saved and reused for
+the next generation.
 
 `virt-lab` can be useful for spinning up temporary clusters of guests for
 testing or development on your local hypervisor.
@@ -14,7 +16,7 @@ included in this repo within git submodule.
 ## Usage
 
     usage: virt-lab [<options>] <command> [<name>]
-    
+
     Commands:
       create <name>     create guests
       destroy <name>    destroy guests
@@ -25,7 +27,7 @@ included in this repo within git submodule.
       list              list guest sets
       help              show help
       version           show version
-    
+
     Install and remove sets of guests on a local hypervisor using cloud-init images.
 
 ## KVM
@@ -44,7 +46,7 @@ The `virt-lab` program and related files can be installed with:
 
     make update install
 
-## Ubuntu notes
+### Ubuntu notes
 
 [Ubuntu][2] distributes the linux images as unreadable by regular users. This
 breaks the ability of libguestfs to modify guest images, unless running as
@@ -68,7 +70,7 @@ The section names specify the **lab** names available to the `virt-lab`
 commands.  Lab names are limited to ASCII alphanumeric characters and the
 underscore (`'_'`) character. The options for a given section specify the guest
 configuration for each guest in the **lab**.  It is possible to override values
-for a specify guest by providing a subsections in the INI file in the form
+for a specific guest by providing a subsections in the INI file in the form
 `<lab>.<number>`. Guest numbers start with 1.
 
 Option names are:
@@ -121,6 +123,10 @@ installed for a guest.  The following are currently supported:
 | ubuntu1604      | Ubuntu 16.04 LTS (Xenial Xerus)     | ubuntu   |
 | ubuntu1804      | Ubuntu 18.04 LTS (Bionic Beaver)    | ubuntu   |
 
+# Playbooks
+
+See the [playbooks](playbooks/README.md) for information on how to run one or
+more Ansible playbooks on the set of newly created guests.
 
 # Examples
 
@@ -128,21 +134,22 @@ Here is an example `virt-lab.cfg` configuration file.
 
     $ cat $HOME/virt-lab.cfg
     [test]
-    desc = My test environment
     guests = 6
+    desc = My test environment
     distro = centos7
     key =  ~/.ssh/mykey.pub
     domain = example.com
     bridge = vlbr0
     gateway = 192.168.123.1
+    # Setup local name resolution for the new guests. (Assumes you have systemd-resolve)
     postcreate = systemd-resolve --interface {bridge} --set-dns {gateway} --set-domain {domain}
-    
+
     [dev]
+    guests = 3
     desc = Guests for development
     distro = debian
-    images = 3
-    postcreate = ansible-playbook xyzzy.yaml
-    
+    postcreate = ansible-playbook -i {scriptdir}/inventory.sh -i myvars myplaybook.yaml
+
     [dev.1]
     distro = centos6
     disksize = 20
@@ -158,7 +165,7 @@ List the configured labs.
       - test03: centos7, undefined
       - test04: centos7, undefined
       - test05: centos7, undefined
-    
+
     - name: dev
       desc: Guests for development
       guests:
@@ -195,7 +202,7 @@ Create the "test" lab.
       - test03: centos7, running
       - test04: centos7, running
       - test05: centos7, running
-    
+
     - name: dev
       desc: Guests for development
       guests:

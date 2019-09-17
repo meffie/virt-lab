@@ -20,10 +20,13 @@ gateway = 192.168.122.1
 [dev]
 # Options for the dev guests.
 desc = Guests for development
+guests = 4
 distro = centos7
-images = 4
 postcreate = {scriptdir}/postcreate.sh
 postdestroy = {scriptdir}/postdestroy.sh
+# Ansible inventory host groups for the dev lab.
+group.webservers = 1..3
+group.dbservers = 1,4
 
 [dev.1]
 # Options for the first dev guest.
@@ -31,8 +34,3 @@ distro = ubuntu1804
 disksize = 20
 # Run this script on the guest on first boot.
 scriptname = {scriptdir}/apt-install-python.sh
-
-[dev.groups]
-# Ansible inventory host groups for the dev lab.
-webservers = 1..3
-dbservers = 1,4
