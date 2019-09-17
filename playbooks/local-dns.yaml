@@ -10,10 +10,6 @@
     gateway: "{{ lookup('env', 'VIRTLAB_GATEWAY') | default('') }}"
     domain: "{{ lookup('env', 'VIRTLAB_DOMAIN') | default('') }}"
   tasks:
-    - debug:
-        var: bridge
-    - debug:
-        var: gateway
     - name: Add virtual network interface to systemd resolver
       command: >
         systemd-resolve
