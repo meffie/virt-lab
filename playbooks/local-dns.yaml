@@ -1,0 +1,15 @@
+---
+- name: Setup dns resolver
+  hosts: localhost
+  become: "yes"
+  vars:
+    bridge: "{{ lookup('env', 'VIRTLAB_BRIDGE') }}"
+    gateway: "{{ lookup('env', 'VIRTLAB_GATEWAY') }}"
+    domain: "{{ lookup('env', 'VIRTLAB_DOMAIN') }}"
+  tasks:
+    - name: Add virtual network interface to systemd resolver
+      command: >
+        systemd-resolve
+        --interface {{ bridge }}
+        --set-dns {{ gateway }}
+        --set-domain {{ domain }}
