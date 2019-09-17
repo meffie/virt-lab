@@ -355,7 +355,13 @@ class Lab:
         # Set our host vars.
         inventory['_meta'] = {'hostvars': {}}
         for guest in self.guests():
-            inventory['_meta']['hostvars'][guest.hostname] = {}
+            hostname = guest.hostname
+            inventory['_meta']['hostvars'][hostname] = {}
+            for name,value in guest.get_values().items():
+                if not name.startswith('var.'):
+                    continue # skip regular options
+                name = name.replace('var.', '', 1)
+                inventory['_meta']['hostvars'][hostname][name] = value
             #if guest.ip:
             #    inventory['_meta']['hostvars'][hostname]['ansible_host'] = guest.ip
 
@@ -425,6 +431,14 @@ class Guest:
         except (NoSectionError, NoOptionError):
             value = None
         return value
+
+    def get_values(self):
+        section = '%s.%d' % (self.lab.name, self.number)
+        values = self.lab.get_values()
+        if self.lab.config.has_section(section):
+            for name,value in self.lab.config.items(section):
+                values[name] = value
+        return values
 
     def create(self):
         if self.domain_exists():

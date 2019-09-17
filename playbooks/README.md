@@ -12,13 +12,15 @@ have `virt-lab` run other custom playbooks by specifying them in the
 
 ## Running the playbooks
 
-Playbooks may be run `virt-lab` by setting the `postcreate` option in
-`virt-lab.cfg` to run `ansible-playbook` directory, or to run a shell script
-which runs `ansible-playbook`.
+Specify a `postcreate` option to run the playbooks automatically after the
+guest have been created. `ansible-playbook` may be run directly, or
+alternatively, a shell script may be specified which can run one or more
+playbooks, and well as other local commands.
 
-Use the `scripts/inventory.sh` shell script to generate a dynamic inventory of
-the guests created by `virt-lab`. Additional host and group variables can be
-provided with additional `ansible-playbook` `-i` options.
+Use the ansible-playbook `-i {scriptdir}/inventory.sh` option to generate a
+dynamic inventory of the guests created by `virt-lab`.  Host groups and host
+variables can be specified in the `virt-lab.cfg`. Additional static variables
+can be specifed with multiple ansible-playbook `-i` command line arguments.
 
 ### Running ansible-playbook directly.
 
@@ -78,13 +80,17 @@ Example script:
     ansible-playbook -i ${VIRTLAB_SCRIPTDIR}/inventory.sh ${VIRTLAB_PLAYBOOKDIR}/wait.yaml
     # Do other tasks here as needed.
 
-## Host groups
+## Host groups and variables
 
 Ansible groups can be defined in the `virt-lab.cfg` file for playbooks and
 roles. Groups are specified as options in the form `group.<group_name>`. The
 value of the group options is a comma separated list of guest numbers. The
 first guest is number '1'.  A range of numbers can be specified in the form
 `<from>..<to>`. The wildcard `*` is a shortcut to specify all of the guests.
+
+Ansible hostvars are in the form `var.<hostvar_name>`. Hostvar values cascade
+just like normal options, e.g. `.global` section, lab section, guest section
+(if one).
 
 Example:
 
@@ -95,3 +101,7 @@ Example:
     group.webserver = 2,3,4
     group.test_client = 4..8
     group.krb_client = *
+    var.myvar = myvalue
+
+    [mylab.1]
+    var.myvar = override
