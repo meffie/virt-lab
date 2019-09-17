@@ -263,6 +263,8 @@ class Lab:
         if value is None:
             value = DEFAULTS.get(name, None)
         if value is not None:
+            if hasattr(value, 'replace'):
+                value = value.replace('\n',' ').replace('\r',' ')
             if name in TEMPLATES:
                 value = self.expand_string(value)
             if name in PATHNAMES:
