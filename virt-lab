@@ -600,25 +600,38 @@ class VirtLab:
     def _read_config(self):
         """Read the config file
 
-        When the file is specified with the --config option, try to read that
-        file only or fail.  When the config file is not specified, try to read
+        If present, read the ~/.virt-lab.cfg first to load any site-local
+        settings. This can be helpful to share virt-lab.cfg files but allow
+        users to customize host specific settings, such as 'key', 'bridge',
+        and 'gateway'.
+
+        When a file is specified with the --config option, try to read that
+        file or fail.  When the config file is not specified, try to read
         virt-lab.cfg in the current directory, and if not found, try to read
         virt-lab.cfg in the home directory.
         """
         self._config = ConfigParser()
+
+        # Steath read site-local settings if present.
+        local_config = os.path.expanduser('~/.virt-lab.cfg')
+        self._config.read([local_config])
+
         config = self._args.config
         if config:
+            # --config given; read that one.
             files = self._config.read([config])
             if not files:
                 die('Unable to read config file %s.' % (config))
         else:
+            # Look for the config file in the current directory.
             config = 'virt-lab.cfg'
             files = self._config.read([config])
             if not files:
+                # Fall back to the home directory.
                 config = os.path.expanduser('~/virt-lab.cfg')
                 files = self._config.read([config])
                 if not files:
-                    die('Unable to read config file.')
+                    die('Unable to read config file "virt-lab.cfg" or "~/virt-lab.cfg".')
 
     def _unknown(self):
         die('Unknown command: %s' % sys.argv[1])
