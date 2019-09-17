@@ -11,10 +11,15 @@ help:
 	@echo "  update          update git submodules"
 	@echo "  install         install virt-lab"
 	@echo "  install-kvm     run playbook to install kvm"
+	@echo "  lint            lint checks"
 
 update:
 	git submodule init
 	git submodule update
+
+lint:
+	yamllint playbooks/*.yaml
+	pyflakes3 virt-lab
 
 install: update
 	install -d $(DATADIR)/$(PACKAGE)
