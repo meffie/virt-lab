@@ -63,13 +63,13 @@ Commands:
 '''
 DEFAULTS = {
     'autostart': True,
-    'bridge': 'virbr0',
+    'bridge': None,
     'cpus': None,
     'disksize': None,
     'distro': 'centos7',
     'domain': 'example.com',
     'feature': None,
-    'gateway': '192.168.122.1',
+    'gateway': None,
     'graphics': None,
     'guests': '3',
     'imagedir': None,

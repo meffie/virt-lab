@@ -1,15 +1,26 @@
 ---
+# Resolve the guest names with libvirt's dnsmasq on systems running
+# systemd-resolve. The libvirt network must be setup to use a remote resolver
+# before running this, or you'll have local resolver looping.
 - name: Setup dns resolver
   hosts: localhost
   become: "yes"
   vars:
-    bridge: "{{ lookup('env', 'VIRTLAB_BRIDGE') }}"
-    gateway: "{{ lookup('env', 'VIRTLAB_GATEWAY') }}"
-    domain: "{{ lookup('env', 'VIRTLAB_DOMAIN') }}"
+    bridge: "{{ lookup('env', 'VIRTLAB_BRIDGE') | default('') }}"
+    gateway: "{{ lookup('env', 'VIRTLAB_GATEWAY') | default('') }}"
+    domain: "{{ lookup('env', 'VIRTLAB_DOMAIN') | default('') }}"
   tasks:
+    - debug:
+        var: bridge
+    - debug:
+        var: gateway
     - name: Add virtual network interface to systemd resolver
       command: >
         systemd-resolve
         --interface {{ bridge }}
         --set-dns {{ gateway }}
         --set-domain {{ domain }}
+      when:
+        - bridge | length > 0
+        - gateway | length > 0
+        - domain | length > 0
