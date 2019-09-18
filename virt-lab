@@ -19,7 +19,13 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-#
+#-------------------------------------------------------------------------------
+# pylint: disable=missing-docstring
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable=global-statement
+# pylint: disable=invalid-name
+# pylint: disable=no-self-use
+# pylint: disable=too-many-instance-attributes
 
 from __future__ import print_function
 
@@ -31,28 +37,24 @@ import string
 import json
 
 try:
-    # python3
-    from configparser import ConfigParser
+    from configparser import ConfigParser    # Python3
     from configparser import NoSectionError
     from configparser import NoOptionError
 except ImportError:
-    # python2
-    from ConfigParser import SafeConfigParser as ConfigParser
+    from ConfigParser import SafeConfigParser as ConfigParser # Python2
     from ConfigParser import NoSectionError
     from ConfigParser import NoOptionError
 
-PY3 = sys.version_info[0] == 3
-if PY3:
-    string_types = str,
-else:
-    string_types = basestring,
-
-verbose = False
-dryrun = False
+try:
+    basestring # Python2
+except NameError:
+    basestring = str # Python3
 
 VERSION = 'v0.8'
-VIRTDIR = '~/virt'
-DESC  = 'Install and remove sets of guests on a local hypervisor using cloud-init images.'
+VERBOSE = False
+DRYRUN = False
+VIRTDIR = os.path.expanduser('~/virt') # Same as kvm-install-vm.
+DESC = 'Install and remove guests on a local kvm hypervisor using cloud-init images.'
 USAGE = '''\
 virt-lab [<options>] <command> [<name>]
 
@@ -98,7 +100,7 @@ PATHNAMES = ('key', 'imagedir', 'scriptname', 'vmdir', 'vardir',
              'scriptdir', 'playbookdir', 'postcreate', 'postdestroy')
 
 def trace(msg):
-    if verbose:
+    if VERBOSE:
         sys.stdout.write('[trace]: %s\n' % msg)
 
 def info(msg):
@@ -134,7 +136,7 @@ def run(args):
         cmdline = ' '.join([shellquote(a) for a in args])
     else:
         cmdline = str(args)
-    if dryrun:
+    if DRYRUN:
         trace('Skipping: %s' % cmdline)
         return 0
     trace('Running: %s' % cmdline)
@@ -213,10 +215,8 @@ class Variables:
             json.dump(self.vars, f)
 
     def remove(self):
-        try:
+        if os.path.exists(self.path):
             os.unlink(self.path)
-        except:
-            pass
 
     def get(self, name):
         return self.vars.get(name, None)
@@ -238,7 +238,7 @@ class Lab:
         self.vars = Variables(os.path.join(self.vardir, 'labs', self.name + '.json'))
         # Set env variables for external commands.
         os.environ['VIRTLAB_NAME'] = self.name
-        for key in DEFAULTS.keys():
+        for key in DEFAULTS:
             value = self.get(key)
             os.environ['VIRTLAB_' + key.upper()] = str(value) if value else ''
 
@@ -270,8 +270,8 @@ class Lab:
             value = DEFAULTS.get(name, None)
         if value is None:
             value = ''
-        if isinstance(value, string_types):
-            value = value.replace('\n',' ').replace('\r',' ')
+        if isinstance(value, basestring):
+            value = value.replace('\n', ' ').replace('\r', ' ')
             if name != 'namefmt': # Do not expand this format string.
                 value = self.expand_string(value)
             if name in PATHNAMES:
@@ -308,10 +308,10 @@ class Lab:
     def get_values(self):
         values = {}
         if self.config.has_section('.global'):
-            for name,value in self.config.items('.global'):
+            for name, value in self.config.items('.global'):
                 values[name] = value
         if self.config.has_section(self.name):
-            for name,value in self.config.items(self.name):
+            for name, value in self.config.items(self.name):
                 values[name] = value
         return values
 
@@ -333,7 +333,7 @@ class Lab:
         # Convert the group host number ranges to lists of hostnames.
         groups = {}     # key: group name, value: list of guest hostnames
         grouped = set() # any hosts not grouped will be placed in the ungrouped list
-        for name,value in self.get_values().items():
+        for name, value in self.get_values().items():
             if not name.startswith('group.'):
                 continue # skip regular options
             name = name.replace('group.', '', 1)
@@ -344,7 +344,9 @@ class Lab:
             groups[name] = []
             for i in parse_sequence(value):
                 if not i in guests:
-                    raise ValueError('Guest number %d is out of range in option "%s".' % (i, 'group.'+name))
+                    raise ValueError(
+                        'Guest number %d is out of range in option "%s".' % \
+                        (i, 'group.'+name))
                 groups[name].append(guests[i])
             grouped.update(groups[name])
 
@@ -354,17 +356,17 @@ class Lab:
 
         # Set our host groups in the inventory, including "ungrouped".
         for name in groups:
-            inventory[name] = {'hosts': groups[name] }
+            inventory[name] = {'hosts': groups[name]}
 
         # Set the group names as children of the special "all" group.
-        inventory['all'] = {'children': list(groups.keys()) }
+        inventory['all'] = {'children': list(groups.keys())}
 
         # Set our host vars.
         inventory['_meta'] = {'hostvars': {}}
         for guest in self.guests():
             hostname = guest.hostname
             inventory['_meta']['hostvars'][hostname] = {}
-            for name,value in guest.get_values().items():
+            for name, value in guest.get_values().items():
                 if not name.startswith('var.'):
                     continue # skip regular options
                 name = name.replace('var.', '', 1)
@@ -443,7 +445,7 @@ class Guest:
         section = '%s.%d' % (self.lab.name, self.number)
         values = self.lab.get_values()
         if self.lab.config.has_section(section):
-            for name,value in self.lab.config.items(section):
+            for name, value in self.lab.config.items(section):
                 values[name] = value
         return values
 
@@ -466,7 +468,7 @@ class Guest:
                 args.append(value)
 
         args = ['kvm-install-vm', 'create']
-        flag('-v', verbose)
+        flag('-v', VERBOSE)
         flag('-a', self.autostart)
         opt('-b', self.bridge)
         opt('-c', self.cpus)
@@ -513,10 +515,10 @@ class Guest:
                 for line in virsh('dominfo', self.name).splitlines():
                     if not line:
                         continue
-                    key,value = line.split(':', 1)
-                    key = key.strip()
+                    name, value = line.split(':', 1)
+                    name = name.strip()
                     value = value.strip()
-                    dominfo[key] = value
+                    dominfo[name] = value
             except VirshError:
                 return None
             self.dominfo = dominfo
@@ -592,7 +594,7 @@ class Guest:
                 ip = s['ip-address']
                 trace('guest %s has ip %s' % (self.name, ip))
                 return ip
-        trace('guest %s: ip not found in file %s' % (self.name,filename))
+        trace('guest %s: ip not found in file %s' % (self.name, filename))
         return None
 
 class VirtLab:
@@ -612,11 +614,11 @@ class VirtLab:
 
     def _parse_args(self, parser):
         """Parse subcommand arguments."""
+        global VERBOSE
+        global DRYRUN
         self._args = parser.parse_args(sys.argv[2:], self._args)
-        global verbose
-        global dryrun
-        verbose = self._args.verbose
-        dryrun = self._args.dryrun
+        VERBOSE = self._args.verbose
+        DRYRUN = self._args.dryrun
 
     def _read_config(self):
         """Read the config file

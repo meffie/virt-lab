@@ -19,7 +19,8 @@ update:
 
 lint:
 	yamllint playbooks/*.yaml
-	pyflakes3 virt-lab
+	pylint virt-lab
+	pylint3 virt-lab
 
 install: update
 	install -d $(DATADIR)/$(PACKAGE)
