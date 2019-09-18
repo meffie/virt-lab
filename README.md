@@ -16,19 +16,19 @@ included in this repo within git submodule.
 ## Usage
 
     usage: virt-lab <command> [<name>] [<options>]
-
+    
     Commands:
-      create <name>     create guests
-      destroy <name>    destroy guests
+      create <name>     create guests (alias: new)
+      destroy <name>    destroy guests (alias: rm)
       start <name>      start guests
       stop <name>       shutdown guests
       info <name>       show lab and guest status
-      inventory <name>  ansible dynamic inventory
-      list              list guest sets
+      inventory <name>  generate ansible dynamic inventory
+      list              list labs (alias: ls)
       help              show help
       version           show version
-
-    Install and remove sets of guests on a local hypervisor using cloud-init images.
+    
+    Install and remove guests on a local kvm hypervisor using cloud-init images.
 
 ## KVM
 

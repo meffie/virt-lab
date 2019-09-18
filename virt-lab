@@ -59,13 +59,13 @@ USAGE = '''\
 virt-lab <command> [<name>] [<options>]
 
 Commands:
-  create <name>     create guests
-  destroy <name>    destroy guests
+  create <name>     create guests (alias: new)
+  destroy <name>    destroy guests (alias: rm)
   start <name>      start guests
   stop <name>       shutdown guests
   info <name>       show lab and guest status
-  inventory <name>  ansible dynamic inventory
-  list              list guest sets
+  inventory <name>  generate ansible dynamic inventory
+  list              list labs (alias: ls)
   help              show help
   version           show version
 '''
@@ -607,6 +607,10 @@ class VirtLab(object):
             dryrun=False,
             purge=False,
             config=None)
+        # Subcommand aliases.
+        self.new = self.create
+        self.rm = self.destroy
+        self.ls = self.list
 
     def _progname(self):
         """Subcommand program name."""
