@@ -15,7 +15,7 @@ included in this repo within git submodule.
 
 ## Usage
 
-    usage: virt-lab [<options>] <command> [<name>]
+    usage: virt-lab <command> [<name>] [<options>]
 
     Commands:
       create <name>     create guests

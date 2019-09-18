@@ -56,7 +56,7 @@ DRYRUN = False
 VIRTDIR = os.path.expanduser('~/virt') # Same as kvm-install-vm.
 DESC = 'Install and remove guests on a local kvm hypervisor using cloud-init images.'
 USAGE = '''\
-virt-lab [<options>] <command> [<name>]
+virt-lab <command> [<name>] [<options>]
 
 Commands:
   create <name>     create guests
