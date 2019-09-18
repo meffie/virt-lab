@@ -46,9 +46,9 @@ except ImportError:
     from ConfigParser import NoOptionError
 
 try:
-    basestring # Python2
+    string_type = basestring # Python2
 except NameError:
-    basestring = str # Python3
+    string_type = str # Python3
 
 VERSION = 'v0.8'
 VERBOSE = False
@@ -198,7 +198,7 @@ class Formatter(string.Formatter):
     def get_value(self, key, args, kwargs):
         return self.lab.get(key)
 
-class Variables:
+class Variables(object):
     def __init__(self, path):
         self.path = path
         self.vars = {}
@@ -225,7 +225,7 @@ class Variables:
         self.vars[name] = value
         self.save()
 
-class Lab:
+class Lab(object):
 
     def __init__(self, name, args, config):
         m = re.search(r'[^a-zA-Z0-9_]', name)
@@ -270,7 +270,7 @@ class Lab:
             value = DEFAULTS.get(name, None)
         if value is None:
             value = ''
-        if isinstance(value, basestring):
+        if isinstance(value, string_type):
             value = value.replace('\n', ' ').replace('\r', ' ')
             if name != 'namefmt': # Do not expand this format string.
                 value = self.expand_string(value)
@@ -376,7 +376,7 @@ class Lab:
 
         return inventory
 
-class Guest:
+class Guest(object):
 
     def __init__(self, lab, number):
         self.dominfo = None
@@ -597,7 +597,7 @@ class Guest:
         trace('guest %s: ip not found in file %s' % (self.name, filename))
         return None
 
-class VirtLab:
+class VirtLab(object):
 
     def __init__(self):
         self._command = ''
