@@ -19,8 +19,8 @@ update:
 
 lint:
 	yamllint playbooks/*.yaml
-	pylint virt-lab
-	pylint3 virt-lab
+	pylint --rcfile=.pylintrc  virt-lab
+	pylint3 --rcfile=.pylint3rc virt-lab
 
 install: update
 	install -d $(DATADIR)/$(PACKAGE)
