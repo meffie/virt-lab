@@ -444,6 +444,12 @@ class Guest(object):
             value = self.get_cfg_value(name)
         if value is None:
             value = self.lab.get(name)
+        if isinstance(value, string_type):
+            value = value.replace('\n', ' ').replace('\r', ' ')
+            if name != 'namefmt': # Do not expand this format string.
+                value = self.lab.expand_string(value)
+            if name in PATHNAMES:
+                value = os.path.expanduser(value)
         trace('%s: %12s = %s' % (self.name, name, value))
         return value
 
