@@ -744,6 +744,14 @@ class VirtLab(object):
                 error('post-create command failed: %s; rc=%d' % (lab.postcreate, rc))
         lab.vars.set('status', 'active')
 
+        # Update our global list of labs.
+        v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
+        labs = v.get('labs')
+        if labs is None:
+            labs = []
+        labs.append(lab.name)
+        v.set('labs', labs)
+
     def destroy(self):
         """Destroy the virtual lab guests."""
         parser = argparse.ArgumentParser(
@@ -766,6 +774,15 @@ class VirtLab(object):
             if rc != 0:
                 die('post-destroy command failed: %s; rc=%d' % (lab.postdestroy, rc))
         lab.vars.set('status', 'inactive')
+
+        # Update our global list of labs.
+        v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
+        labs = v.get('labs')
+        if labs is None:
+            labs = []
+        if lab.name in labs:
+            labs.remove(lab.name)
+        v.set('labs', labs)
 
     def start(self):
         """Start the virtual lab guests."""
@@ -855,6 +872,7 @@ class VirtLab(object):
             else:
                 print('%-12s %-12s %s' % ('name', 'status', 'description'))
                 print('%-12s %-12s %s' % (sep, sep, sep))
+        seen = []
         for section in self._config.sections():
             if '.' in section:
                 continue # skip subsections
@@ -862,10 +880,21 @@ class VirtLab(object):
             lab = Lab(name, self._args, self._config)
             if self._args.active and lab.status != 'active':
                 continue # skip inactive when --active is given
+            seen.append(lab.name)
             if brief:
                 print(lab.name)
             else:
                 print('%-12s %-12s %s' % (lab.name, lab.status, escape(lab.desc)))
+        # Labs from other configs!
+        v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
+        labs = v.get('labs')
+        for lab in labs:
+            if lab in seen:
+                continue
+            if brief:
+                print(lab)
+            else:
+                print('%-12s %-12s %s' % (lab, 'active', ''))
 
     def inventory(self):
         """Ansible dynamic inventory."""
