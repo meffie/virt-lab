@@ -888,13 +888,14 @@ class VirtLab(object):
         # Labs from other configs!
         v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
         labs = v.get('labs')
-        for lab in labs:
-            if lab in seen:
-                continue
-            if brief:
-                print(lab)
-            else:
-                print('%-12s %-12s %s' % (lab, 'active', ''))
+        if labs is not None:
+            for lab in labs:
+                if lab in seen:
+                    continue
+                if brief:
+                    print(lab)
+                else:
+                    print('%-12s %-12s %s' % (lab, 'active', ''))
 
     def inventory(self):
         """Ansible dynamic inventory."""
