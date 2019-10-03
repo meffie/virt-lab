@@ -8,6 +8,7 @@ have `virt-lab` run other custom playbooks by specifying them in the
 ## Playbook
 
 * `local_dns.yaml` - Setup local DNS resolution with the systemd resolver
+* `set-sshkeys.yaml` - Install pre-defined ssh-keys
 * `wait.yaml` - Wait for systems to become reachable
 
 ## Running the playbooks
