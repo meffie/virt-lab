@@ -1,53 +1,54 @@
 ---
-
 - name: Install pre-defined ssh-keys
   hosts: all
-  become: yes
+  become: "yes"
   tasks:
-      - name: Import the pre-defined root ssh private keys
-        copy:
-          src: "{{ item }}"
-          dest: "/root/.ssh/"
-          owner: "root"
-          mode: "0600"
-        with_fileglob:
-            - "keyfiles/{{ inventory_hostname_short }}_root_id*!(.pub)"
+    - name: Import the pre-defined root ssh private keys
+      copy:
+        src: "{{ item }}"
+        dest: "/root/.ssh/"
+        owner: "root"
+        mode: "0600"
+      with_fileglob:
+        - "keyfiles/{{ inventory_hostname_short }}_root_id*!(.pub)"
 
-      - name: Import the pre-defined root ssh public keys
-        copy:
-          src: "{{ item }}"
-          dest: "/root/.ssh/"
-          owner: "root"
-          mode: "0644"
-        with_fileglob:
-            - "keyfiles/{{ inventory_hostname_short }}_root_id*.pub"
+    - name: Import the pre-defined root ssh public keys
+      copy:
+        src: "{{ item }}"
+        dest: "/root/.ssh/"
+        owner: "root"
+        mode: "0644"
+      with_fileglob:
+        - "keyfiles/{{ inventory_hostname_short }}_root_id*.pub"
 
-      - name: Import the pre-defined user ssh private keys
-        copy:
-          src: "{{ item }}"
-          dest: "/home/{{ extra_user }}/.ssh/"
-          owner: "{{ extra_user }}"
-          mode: "0600"
-        with_fileglob:
-            - "keyfiles/{{ inventory_hostname_short }}_{{ extra_user }}_id*!(.pub)"
+    - name: Import the pre-defined user ssh private keys
+      copy:
+        src: "{{ item }}"
+        dest: "/home/{{ extra_user }}/.ssh/"
+        owner: "{{ extra_user }}"
+        mode: "0600"
+      with_fileglob:
+        - "keyfiles/{{ inventory_hostname_short }}_{{ extra_user }}_id*!(.pub)"
 
-      - name: Import the pre-defined user ssh public keys
-        copy:
-          src: "{{ item }}"
-          dest: "/home/{{ extra_user }}/.ssh/"
-          owner: "{{ extra_user }}"
-          mode: "0644"
-        with_fileglob:
-            - "keyfiles/{{ inventory_hostname_short }}_{{ extra_user }}_id*.pub"
+    - name: Import the pre-defined user ssh public keys
+      copy:
+        src: "{{ item }}"
+        dest: "/home/{{ extra_user }}/.ssh/"
+        owner: "{{ extra_user }}"
+        mode: "0644"
+      with_fileglob:
+        - "keyfiles/{{ inventory_hostname_short }}_{{ extra_user }}_id*.pub"
 
-      - name: Clean up ssh keynames
-        command:
-          chdir: "{{ item.keyhome }}"
-          argv:
-            - rename
-            - "{{ inventory_hostname_short }}_{{ item.keyowner }}_id_"
-            - "id_"
-            - "*"
-        with_items:
-            - { keyhome: "/root", keyowner: "root"}
-            - { keyhome: "/home/{{ extra_user }}", keyowner: "{{ extra_user }}"}
+    - name: Clean up ssh keynames
+      command:
+        chdir: "{{ item.keyhome }}"
+        argv:
+          - rename
+          - "{{ inventory_hostname_short }}_{{ item.keyowner }}_id_"
+          - "id_"
+          - "*"
+      with_items:
+        - keyhome: "/root"
+          keyowner: "root"
+        - keyhome: "/home/{{ extra_user }}"
+          keyowner: "{{ extra_user }}"
