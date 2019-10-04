@@ -6,12 +6,13 @@ new guests. Guest sets, called **labs**, are defined in an INI-style
 configuration file.  MAC addresses assigned to guests are saved and reused for
 the next generation.
 
-`virt-lab` can be useful for spinning up temporary clusters of guests for
-testing or development on your local hypervisor.
+`virt-lab` can be useful for spinning up clusters of guests on your local linux
+system for testing or development.
 
-`virt-lab` is requires the [`kvm-install-vm`][1] shell script by Giovanni
-Torres to download and install the cloud-init images. `kvm-install-vm` is
-included in this repo within git submodule.
+`virt-lab` is a wrapper of the very nice [`kvm-install-vm`][1] shell script by
+Giovanni Torres to download and install cloud-init images. `kvm-install-vm` is
+included in this repo within a git submodule to make installation slightly
+easier.
 
 ## Usage
 
@@ -30,21 +31,23 @@ included in this repo within git submodule.
     
     Install and remove guests on a local kvm hypervisor using cloud-init images.
 
-## KVM
+## KVM Setup
 
-A local KVM hypervisor must be installed and running along with `libvirt`. An
-Ansible playbook to install the local KVM hypervisor and required tools is
-provided in the `kvm` directory.  Be sure you are able to connect to the
-locally running libvirt daemon, e.g. `virsh list --all` before proceeding.
+A local KVM hypervisor must be installed and running along with `libvirt`
+before `virt-lib` can be run. An Ansible playbook to install the local KVM
+hypervisor and the required libvirt tools is provided in the `kvm` directory.
+Be sure you are able to connect to the locally running libvirt daemon, e.g.,
+`virsh list --all`, before proceeding.
 
-It is also possible to use Xen as a local hypervisor. See the "Advanced"
-`kvm-install-vm` configuration options.
+It is also possible to use Xen as a local hypervisor for virt-lab images. See
+the "Advanced" `kvm-install-vm` configuration options for more information.
 
 ## Installation
 
-The `virt-lab` program and related files can be installed with:
+Install `virt-lab` with the following commands, running as a non-root user:
 
-    make update install
+    $ make update
+    $ make install
 
 ### Ubuntu notes
 
@@ -59,7 +62,7 @@ guest images.  This can be fixed by overriding the file permission settings of
 the linux kernel images on Ubuntu.
 
 Use the following `dpkg-statoverride` command to make your linux images
-readable by non-root users, allowing you to modify your guest images.
+readable by non-root users, allowing you to modify your guest images:
 
     $ for image in /boot/vmlinu*; do sudo dpkg-statoverride --update --add root root 0644 $image || true; done
 
