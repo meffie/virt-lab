@@ -235,8 +235,8 @@ class Variables(object):
         if os.path.exists(self.path):
             os.unlink(self.path)
 
-    def get(self, name):
-        return self.vars.get(name, None)
+    def get(self, name, default=None):
+        return self.vars.get(name, default)
 
     def set(self, name, value):
         self.vars[name] = value
@@ -746,10 +746,7 @@ class VirtLab(object):
 
         # Update our global list of labs.
         v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
-        labs = v.get('labs')
-        if labs is None:
-            labs = []
-        labs = set(labs)
+        labs = set(v.get('labs', default=[]))
         labs.add(lab.name)
         v.set('labs', list(labs))
 
@@ -778,10 +775,7 @@ class VirtLab(object):
 
         # Update our global list of labs.
         v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
-        labs = v.get('labs')
-        if labs is None:
-            labs = []
-        labs = set(labs)
+        labs = set(v.get('labs', default=[]))
         labs.discard(lab.name)
         v.set('labs', list(labs))
 
@@ -886,12 +880,10 @@ class VirtLab(object):
                 print(lab.name)
             else:
                 print('%-12s %-12s %s' % (lab.name, lab.status, escape(lab.desc)))
+
         # Labs from other configs!
         v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
-        labs = v.get('labs')
-        if labs is None:
-            labs = []
-        labs = set(labs)
+        labs = set(v.get('labs', default=[]))
         for lab in labs:
             if lab in seen:
                 continue
