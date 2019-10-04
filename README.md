@@ -48,15 +48,22 @@ The `virt-lab` program and related files can be installed with:
 
 ### Ubuntu notes
 
-[Ubuntu][2] distributes the linux images as unreadable by regular users. This
-breaks the ability of libguestfs to modify guest images, unless running as
-root.  In order to fix this, you will need to override the file permission
-settings for the linux kernel images on Ubuntu, which can be done with the
-`dpkg-stateoverride` command.
+You may encounter an error message on Ubuntu when attempting create a guest
+with a custom disk size:
 
-    $ sudo dpkg-statoverride --add root root 0644 /boot/vmlinux-$(uname -r) --update
+    - Resizing the disk to 20G ... ERR: Could not resize disk.
 
-This will need to be done each time the kernel is upgraded.
+This happens because current versions of [Ubuntu][2] distribute linux images as
+unreadable by regular users, which breaks the ability of libguestfs to modify
+guest images.  This can be fixed by overriding the file permission settings of
+the linux kernel images on Ubuntu.
+
+Use the following `dpkg-statoverride` command to make your linux images
+readable by non-root users, allowing you to modify your guest images.
+
+    $ for image in /boot/vmlinu*; do sudo dpkg-statoverride --update --add root root 0644 $image || true; done
+
+You will need to override new kernel images *everytime* the kernel is upgraded.
 
 ## Configuration
 
