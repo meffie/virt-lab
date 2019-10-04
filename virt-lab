@@ -245,9 +245,9 @@ class Variables(object):
 class Lab(object):
 
     def __init__(self, name, args, config):
-        m = re.search(r'[^a-zA-Z0-9_]', name)
+        m = re.search(r'[^a-zA-Z0-9_\-]', name)
         if m:
-            die('Invalid lab name.')
+            die('Invalid character "%s" in lab name "%s".' % (m.group(), name))
         self.name = name
         self.values = {}
         self.args = args
