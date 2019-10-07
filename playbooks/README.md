@@ -7,9 +7,38 @@ have `virt-lab` run other custom playbooks by specifying them in the
 
 ## Playbook
 
-* `local_dns.yaml` - Setup local DNS resolution with the systemd resolver
+* `local-dns.yaml` - Setup local DNS resolution with the systemd resolver
+* `local-mirror.yaml` - Setup and update a local CentOS repository mirror
 * `set-sshkeys.yaml` - Install pre-defined ssh-keys
 * `wait.yaml` - Wait for systems to become reachable
+
+### local-dns
+
+### local-mirror
+
+The local-mirror playbook will create a local CentOS repository in a guest in
+order to speed up package installs when spinning up CentOS based guests. Define
+the variable `local_mirror` to specify the host name of the guest hosting the
+repositories.
+
+Example configuration for local-mirror playbook.
+
+    [.global]
+    var.local_mirror = mirror01.{domain}
+
+    [local-mirror]
+    desc = Local CentOS 7 mirror
+    guests = 1
+    namefmt = mirror{guest:02d}
+    distro = centos7
+    disksize = 20
+    group.local_mirrors = 1
+    postcreate = ansible-playbook -i {scriptdir}/inventory.sh {playbookdir}/local-mirror.yaml
+
+### set-sshkeys
+
+### wait
+
 
 ## Running the playbooks
 

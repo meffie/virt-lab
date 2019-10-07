@@ -1,0 +1,96 @@
+---
+#
+# Playbook to create and update a local CentOS mirror.
+#
+# group:  local_mirrors  - group of mirrors
+# var:    local_mirror   - hostname of the local mirror
+#
+#
+- name: Create local repository mirror
+  hosts: local_mirrors
+  become: "yes"
+  tasks:
+    - name: Create local CentOS mirror
+      block:
+        - name: Install packages
+          yum:
+            name:
+              - httpd
+              - createrepo
+            state: present
+        - name: Disable Apache welcome page
+          file:
+            path: /etc/httpd/conf.d/welcome.conf
+            state: absent
+        - name: Start Apache
+          service:
+            name: httpd
+            state: started
+        - name: Create directories to store repositories
+          file:
+            path: "/var/www/html/repos/{{ item }}"
+            state: directory
+          with_items:
+            - base
+            - centosplus
+            - extras
+            - updates
+        - name: Download repositories
+          command: >
+              reposync -g -l -d -m
+              --repoid={{ item }}
+              --newest-only
+              --download-metadata
+              --download_path=/var/www/html/repos/
+          with_items:
+            - base
+            - centosplus
+            - extras
+            - updates
+        - name: Create repositories
+          command: "createrepo /var/www/html/repos/{{ item }}/"
+          with_items:
+            - base
+            - centosplus
+            - extras
+            - updates
+      when:
+        - local_mirror is defined
+        - ansible_facts['distribution'] == "CentOS"
+        - ansible_facts['distribution_major_version'] == "7"
+
+- name: Add local package repositories
+  hosts: all
+  become: "yes"
+  tasks:
+    - block:
+        - stat:
+            path: /etc/yum.repos.d/CentOS-Base.repo
+          register: repo
+        - copy:
+            src: /etc/yum.repos.d/CentOS-Base.repo
+            dest: /etc/yum.repos.d/CentOS-Base.repo.backup
+            remote_src: "yes"
+          when: repo.stat.exists
+        - file:
+            state: absent
+            path: /etc/yum.repos.d/CentOS-Base.repo
+        - name: Add local yum repos
+          yum_repository:
+            state: present
+            name: "{{ item }}"
+            description: "CentOS {{ item }} - local mirror"
+            file: "local-repo"
+            baseurl: "http://{{ local_mirror }}/repos/{{ item }}/"
+            mirrorlist:
+            gpgcheck: "no"
+            enabled: "yes"
+          with_items:
+            - base
+            - centosplus
+            - extras
+            - updates
+      when:
+        - local_mirror is defined
+        - ansible_facts['distribution'] == "CentOS"
+        - ansible_facts['distribution_major_version'] == "7"
