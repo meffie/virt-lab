@@ -811,7 +811,7 @@ class VirtLab(object):
         lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_stop()
-        lab.vars.set('status', 'inactive')
+        lab.vars.set('status', 'stopped')
 
     def info(self):
         """Show virtual lab and guest info."""
