@@ -26,6 +26,7 @@
           service:
             name: httpd
             state: started
+            enabled: "yes"
         - name: Create directories to store repositories
           file:
             path: "/var/www/html/repos/{{ item }}"

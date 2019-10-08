@@ -24,7 +24,7 @@ repositories.
 Example configuration for local-mirror playbook.
 
     [.global]
-    var.local_mirror = mirror01.{domain}
+    var.local_mirror = mirror01.example.com
 
     [local-mirror]
     desc = Local CentOS 7 mirror
