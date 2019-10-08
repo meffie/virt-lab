@@ -63,7 +63,7 @@ Commands:
   destroy <name>    destroy guests (alias: rm)
   start <name>      start guests
   stop <name>       shutdown guests
-  info <name>       show lab and guest status
+  info <name>       show lab and guest status (alias: show)
   inventory <name>  generate ansible dynamic inventory
   list              list labs (alias: ls)
   help              show help
@@ -654,6 +654,7 @@ class VirtLab(object):
         # Subcommand aliases.
         self.new = self.create
         self.rm = self.destroy
+        self.show = self.info
         self.ls = self.list
 
     def _progname(self):

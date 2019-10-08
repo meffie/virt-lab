@@ -23,7 +23,7 @@ easier.
       destroy <name>    destroy guests (alias: rm)
       start <name>      start guests
       stop <name>       shutdown guests
-      info <name>       show lab and guest status
+      info <name>       show lab and guest status (alias: show)
       inventory <name>  generate ansible dynamic inventory
       list              list labs (alias: ls)
       help              show help
