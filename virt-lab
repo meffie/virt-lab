@@ -833,6 +833,7 @@ class VirtLab(object):
         out.write('guests:\n')
         for guest in lab.guests():
             out.write('  - {name:%s' % guest.name)
+            out.write(', hostname:%s.%s' % (guest.name, guest.domain))
             if guest.status:
                 out.write(', status:%s' % guest.status)
             if guest.distro:
