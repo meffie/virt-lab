@@ -31,7 +31,6 @@ install: update
 	install -d $(BINDIR)
 	install virt-lab $(BINDIR)
 	install kvm-install-vm/kvm-install-vm $(BINDIR)
-	test -f $(HOME)/virt-lab.cfg || cp virt-lab.cfg.example $(HOME)/virt-lab.cfg
 
 install-kvm:
 	ansible-galaxy install -r kvm/requirements.yaml
