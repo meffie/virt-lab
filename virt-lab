@@ -97,7 +97,8 @@ DEFAULTS = {
 }
 
 PATHNAMES = ('key', 'imagedir', 'scriptname', 'vmdir', 'vardir',
-             'scriptdir', 'playbookdir', 'postcreate', 'postdestroy')
+             'scriptdir', 'playbookdir', 'postcreate', 'postdestroy',
+             'poststart', 'poststop')
 
 def trace(msg):
     if VERBOSE:
@@ -796,6 +797,11 @@ class VirtLab(object):
         lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_start()
+        if lab.poststart:
+            lab.setenv()
+            rc = run(lab.poststart)
+            if rc != 0:
+                error('poststart command failed: %s; rc=%d' % (lab.poststart, rc))
         lab.vars.set('status', 'active')
 
     def stop(self):
@@ -813,6 +819,11 @@ class VirtLab(object):
         lab = Lab(self._args.name, self._args, self._config)
         for guest in lab.guests():
             guest.domain_stop()
+        if lab.poststop:
+            lab.setenv()
+            rc = run(lab.poststop)
+            if rc != 0:
+                error('poststop command failed: %s; rc=%d' % (lab.poststop, rc))
         lab.vars.set('status', 'stopped')
 
     def info(self):
