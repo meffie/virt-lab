@@ -8,7 +8,6 @@
 #
 - hosts: localhost
   vars:
-    config_systemd_resolved: true
     # Setup libvirt's dnsmasq with servers and the no-resolv to
     # avoid a DNS loop with systemd-resolved.
     pri_domain_name: example.com
@@ -31,26 +30,6 @@
     - role: mrlesmithjr.kvm
 
   tasks:
-    - name: Check bridge interface DNS resolver.
-      command: >
-        systemd-resolve
-        --status {{ kvm_virtual_networks[0]['bridge_name'] }}
-      register: bridge_status
-      changed_when: false
-      when: config_systemd_resolved
-
-    - name: Setup bridge interface DNS resolver.
-      become: true
-      command: >
-        systemd-resolve
-        --interface {{ kvm_virtual_networks[0]['bridge_name'] }}
-        --set-dns {{ kvm_virtual_networks[0]['dhcp_gateway'] }}
-        --set-domain {{ pri_domain_name }}
-      when: >
-        config_systemd_resolved and
-          (not "DNS Servers: " + kvm_virtual_networks[0]['dhcp_gateway'] in bridge_status.stdout or
-           not "DNS Domain: " + pri_domain_name in bridge_status.stdout)
-
     - name: Set environment variable in profile.
       lineinfile:
         path: "{{ ansible_facts['user_dir'] }}/.profile"
