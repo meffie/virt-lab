@@ -15,17 +15,16 @@
     sec_dns: 8.8.4.4
     kvm_config_virtual_networks: true
     kvm_virtual_networks:
-    - name: virtlab
-      mode: nat
-      bridge_name: vlbr0
-      enable_dhcp: true
-      dhcp_gateway: 192.168.123.1
-      dhcp_netmask: 255.255.255.0
-      dhcp_scope_start: 192.168.123.32
-      dhcp_scope_end: 192.168.123.254
-      autostart: yes
-      state: active
-
+      - name: virtlab
+        mode: nat
+        bridge_name: vlbr0
+        enable_dhcp: true
+        dhcp_gateway: 192.168.123.1
+        dhcp_netmask: 255.255.255.0
+        dhcp_scope_start: 192.168.123.32
+        dhcp_scope_end: 192.168.123.254
+        autostart: true
+        state: active
   roles:
     - role: mrlesmithjr.kvm
 
