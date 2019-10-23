@@ -6,10 +6,13 @@
 #    ansible-galaxy install -r requirements.yaml
 #    ansible-playbook kvm.yaml
 #
-- hosts: localhost
+- name: Install kvm hypervisor
+  hosts: "{{ target | default('localhost') }}"
   vars:
-    # Setup libvirt's dnsmasq with servers and the no-resolv to
-    # avoid a DNS loop with systemd-resolved.
+    # The following will setup libvirt's dnsmasq to use external servers and
+    # the no-resolv option. This is done to avoid a DNS lookup loop with the
+    # local resolver.
+    #
     pri_domain_name: example.com
     pri_dns: 8.8.8.8
     sec_dns: 8.8.4.4
@@ -25,10 +28,49 @@
         dhcp_scope_end: 192.168.123.254
         autostart: true
         state: active
+
   roles:
     - role: mrlesmithjr.kvm
 
   tasks:
+    # When systemd-resolve is present, install a set of scripts to run
+    # systemd-resolve commands to setup the per-interface DNS configuration and
+    # a systemd service to make the configuration persist across reboots.
+    - name: populate service facts
+      service_facts:
+
+    - set_fact:
+        have_systemd_resolved: >
+          {{ 'systemd-resolved.service'
+          in hostvars[inventory_hostname]['services'] }}
+
+    - name: Install DNS configuration scripts
+      become: true
+      template:
+        src: "{{ item }}.j2"
+        dest: "/usr/local/bin/{{ item }}"
+        owner: root
+        group: root
+        mode: "0755"
+      when: have_systemd_resolved | default(False)
+      with_items:
+        - virtlab-dns-start.sh
+        - virtlab-dns-stop.sh
+      notify:
+        - virtlab-dns
+
+    - name: Install DNS configuration systemd unit file
+      become: true
+      template:
+        src: virtlab-dns.service.j2
+        dest: /lib/systemd/system/virtlab-dns.service
+        owner: root
+        group: root
+        mode: "0644"
+      when: have_systemd_resolved | default(False)
+      notify:
+        - virtlab-dns
+
     - name: Set environment variable in profile.
       lineinfile:
         path: "{{ ansible_facts['user_dir'] }}/.profile"
@@ -40,6 +82,14 @@
         - logout required
 
   handlers:
+    - name: virtlab-dns
+      become: true
+      systemd:
+        name: virtlab-dns.service
+        daemon_reload: "yes"
+        enabled: "yes"
+        state: started
+
     - name: logout required
       pause:
         prompt: |

@@ -1,0 +1,4 @@
+#!/bin/sh
+{% for network in kvm_virtual_networks %}
+/usr/bin/systemd-resolve --interface {{ network['bridge_name'] }} --set-dns {{ network['dhcp_gateway'] }} --set-domain {{ pri_domain_name }}
+{% endfor %}

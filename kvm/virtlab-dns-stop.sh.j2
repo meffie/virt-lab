@@ -1,0 +1,4 @@
+#!/bin/sh
+{% for network in kvm_virtual_networks %}
+/usr/bin/systemd-resolve --interface {{ network['bridge_name'] }} --revert
+{% endfor %}

@@ -1,0 +1,13 @@
+[Unit]
+Description=virt-lab guest DNS
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/virtlab-dns-start.sh
+RemainAfterExit=true
+ExecStop=/usr/local/bin/virtlab-dns-stop.sh
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
