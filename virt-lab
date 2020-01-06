@@ -51,7 +51,7 @@ try:
 except NameError:
     string_type = str # Python3
 
-VERSION = 'v1.0'
+VERSION = 'v1.1.0'
 VERBOSE = False
 DRYRUN = False
 VIRTDIR = os.path.expanduser('~/virt') # Same as kvm-install-vm.
