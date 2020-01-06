@@ -1,5 +1,9 @@
 #
-# Example virt-lab configuration.
+# Example virt-lab configuration file
+#
+# Copy this file to ~/.virt-lab/virt-lab.cfg and edit as needed.
+# Multiple conifiguration files are supported. virt-lab will load
+# configuration from each .cfg file in the ~/.virt-lab directory.
 #
 
 [.global]

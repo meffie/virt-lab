@@ -2,9 +2,9 @@
 
 Install virtual machines on a local KVM hypervisor with cloud-init images, and
 then optionally run Ansible [playbooks](playbooks/README.md) to configure the
-new guests. Guest sets, called **labs**, are defined in an INI-style
-configuration file.  MAC addresses assigned to guests are saved and reused for
-the next generation.
+new guests. Guests are grouped into sets called **labs**, which are defined in
+an INI-style configuration file.  MAC addresses assigned to guests are saved
+and reused for the next generation.
 
 `virt-lab` can be useful for spinning up clusters of guests on your local linux
 system for testing or development.
@@ -71,10 +71,9 @@ You will need to override new kernel images *everytime* the kernel is upgraded.
 ## Configuration
 
 The guest sets, called **labs**, are defined in INI-style configuration file.
-`virt-lab` will attempt read the `virt-lab.cfg` file in the current directory,
-and if not found, will atempt to read the `virt-lab.cfg` file in the user's
-home directory.  Use the `--config` option to specify an alternative
-configuration file.
+Place the virt-lab configuration in the `.virt-lab` directory in the user's
+home directory.  `virt-lab` will load the configuration from all files ending
+with `.cfg` in the `~/.virt-lab` configuration directory.
 
 The section names specify the **lab** names available to the `virt-lab`
 commands.  Lab names are limited to ASCII alphanumeric characters and the
@@ -140,9 +139,9 @@ more Ansible playbooks on the set of newly created guests.
 
 # Examples
 
-Here is an example `virt-lab.cfg` configuration file.
+Here is an example configuration file.
 
-    $ cat $HOME/virt-lab.cfg
+    $ cat $HOME/.virt-lab/my.cfg
     [test]
     guests = 6
     desc = My test environment

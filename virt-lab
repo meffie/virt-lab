@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2019 Sine Nomine Associates
+# Copyright (c) 2019-2020 Sine Nomine Associates
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@ import re
 import sys
 import string
 import json
+import glob
 
 try:
     from configparser import ConfigParser    # Python3
@@ -326,7 +327,7 @@ class Lab(object):
         try:
             value = self.config.get(self.name, name)
         except NoSectionError:
-            die('Lab name not found in config file %s' % (self.args.config))
+            die('Lab name not found in configuration.')
         except NoOptionError:
             pass
         return value
@@ -650,7 +651,7 @@ class VirtLab(object):
 
     def __init__(self):
         self._command = ''
-        self._config = None
+        self._config = ConfigParser()
         self._args = argparse.Namespace(
             verbose=False,
             dryrun=False,
@@ -678,40 +679,17 @@ class VirtLab(object):
         self._args = args
 
     def _read_config(self):
-        """Read the config file
+        """Read the config files
 
-        If present, read the ~/.virt-lab.cfg first to load any site-local
-        settings. This can be helpful to share virt-lab.cfg files but allow
-        users to customize host specific settings, such as 'key', 'bridge',
-        and 'gateway'.
-
-        When a file is specified with the --config option, try to read that
-        file or fail.  When the config file is not specified, try to read
-        virt-lab.cfg in the current directory, and if not found, try to read
-        virt-lab.cfg in the home directory.
+        Read the config files in the ~/.virt-lab directory. The path can be
+        overridden by setting VIRTLAB_CONFDIR env variable. The configuration
+        can be in serveral files to make it easier to share and merge configuration.
         """
-        self._config = ConfigParser()
-
-        # Steath read site-local settings if present.
-        local_config = os.path.expanduser('~/.virt-lab.cfg')
-        self._config.read([local_config])
-
-        config = self._args.config
-        if config:
-            # --config given; read that one.
-            files = self._config.read([config])
-            if not files:
-                die('Unable to read config file %s.' % (config))
+        confdir = os.path.expanduser(os.environ.get('VIRTLAB_CONFDIR', '~/.virt-lab'))
+        if not os.path.isdir(confdir):
+            warn('Missing configuration directory "{0}".'.format(confdir))
         else:
-            # Look for the config file in the current directory.
-            config = 'virt-lab.cfg'
-            files = self._config.read([config])
-            if not files:
-                # Fall back to the home directory.
-                config = os.path.expanduser('~/virt-lab.cfg')
-                files = self._config.read([config])
-                if not files:
-                    die('Unable to read config file "virt-lab.cfg" or "~/virt-lab.cfg".')
+            self._config.read(glob.glob(os.path.join(confdir, '*.cfg')))
 
     def _unknown(self):
         die('Unknown command: %s' % sys.argv[1])
@@ -733,7 +711,6 @@ class VirtLab(object):
         parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
-        parser.add_argument('-c', '--config')
         parser.add_argument('-o', '--option', nargs='*', action='append',
                             metavar='<name>=<value>', default=[], type=option_arg)
         self._parse_args(parser)
@@ -764,7 +741,6 @@ class VirtLab(object):
         parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
-        parser.add_argument('-c', '--config')
         parser.add_argument('--purge', action='store_true')
         self._parse_args(parser)
         self._read_config()
@@ -793,7 +769,6 @@ class VirtLab(object):
         parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
-        parser.add_argument('-c', '--config')
         self._parse_args(parser)
         self._read_config()
 
@@ -815,7 +790,6 @@ class VirtLab(object):
         parser.add_argument('name')
         parser.add_argument('-v', '--verbose', action='store_true')
         parser.add_argument('-n', '--dryrun', action='store_true')
-        parser.add_argument('-c', '--config')
         self._parse_args(parser)
         self._read_config()
 
@@ -865,7 +839,6 @@ class VirtLab(object):
         parser.add_argument('-b', '--brief', action='store_true')
         parser.add_argument('-a', '--active', action='store_true')
         parser.add_argument('--no-heading', action='store_true')
-        parser.add_argument('-c', '--config')
         self._parse_args(parser)
         self._read_config()
 
@@ -914,7 +887,6 @@ class VirtLab(object):
         parser = argparse.ArgumentParser(
             prog=self._progname(),
             description=self.list.__doc__)
-        parser.add_argument('-c', '--config')
         parser.add_argument('name')
         self._parse_args(parser)
         self._read_config()
