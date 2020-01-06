@@ -263,6 +263,9 @@ class Lab(object):
             for prefix in ('group', 'var'):
                 if name.startswith(prefix+'.'):
                     name = name.replace(prefix+'.', prefix+'_', 1)
+            if isinstance(value, string_type):
+                if name != 'namefmt': # Do not expand this format string.
+                    value = self.expand_string(value)
             os.environ['VIRTLAB_' + name.upper()] = str(value) if value else ''
 
     def guests(self):
