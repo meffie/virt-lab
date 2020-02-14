@@ -308,7 +308,7 @@ class Lab(object):
     def get_status(self):
         status = self.vars.get('status')
         if status is None:
-            status = 'inactive'
+            status = 'defined'
             self.vars.set('status', status)
         return status
 
@@ -755,7 +755,7 @@ class VirtLab(object):
             rc = run(lab.postdestroy)
             if rc != 0:
                 die('post-destroy command failed: %s; rc=%d' % (lab.postdestroy, rc))
-        lab.vars.set('status', 'inactive')
+        lab.vars.set('status', 'defined')
 
         # Update our global list of labs.
         v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
