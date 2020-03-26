@@ -851,15 +851,8 @@ class VirtLab(object):
 
         heading = not self._args.no_heading
         brief = self._args.brief
-        sep = '-' * 12
-        if heading:
-            if brief:
-                print('name')
-                print('----')
-            else:
-                print('%-12s %-12s %s' % ('name', 'status', 'description'))
-                print('%-12s %-12s %s' % (sep, sep, sep))
-        seen = set()
+
+        seen = dict()
         for section in self._config.sections():
             if '.' in section:
                 continue # skip subsections
@@ -867,22 +860,31 @@ class VirtLab(object):
             lab = Lab(name, self._args, self._config)
             if self._args.active and lab.status != 'active':
                 continue # skip inactive when --active is given
-            seen.add(lab.name)
-            if brief:
-                print(lab.name)
-            else:
-                print('%-12s %-12s %s' % (lab.name, lab.status, escape(lab.desc)))
+            if not lab.name in seen:
+                seen[lab.name] = (lab.status, lab.desc)
 
         # Labs from other configs!
         v = Variables(os.path.join(VIRTDIR, 'vars', 'virtlab.json'))
         labs = set(v.get('labs', default=[]))
-        for lab in labs:
-            if lab in seen:
-                continue
+        for name in labs:
+            if not name in seen:
+                seen[name] = ('active', '')
+
+        if seen and heading:
             if brief:
-                print(lab)
+                print('name')
+                print('----')
             else:
-                print('%-12s %-12s %s' % (lab, 'active', ''))
+                sep = '-' * 12
+                print('%-12s %-12s %s' % ('name', 'status', 'description'))
+                print('%-12s %-12s %s' % (sep, sep, sep))
+
+        for name in sorted(seen.keys()):
+            if brief:
+                print(name)
+            else:
+                status, desc = seen[name]
+                print('%-12s %-12s %s' % (name, status, escape(desc)))
 
     def inventory(self):
         """Ansible dynamic inventory."""
