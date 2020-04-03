@@ -54,7 +54,6 @@ except NameError:
 VERSION = 'v1.1.0'
 VERBOSE = False
 DRYRUN = False
-VIRTDIR = os.path.expanduser('~/virt') # Same as kvm-install-vm.
 DESC = 'Install and remove guests on a local kvm hypervisor using cloud-init images.'
 USAGE = '''\
 virt-lab <command> [<name>] [<options>]
@@ -70,15 +69,44 @@ Commands:
   help              show help
   version           show version
 '''
+
+VIRTDIR = os.path.expanduser('~/virt') # Same as kvm-install-vm.
+
+def kiv_value(name):
+    """Get the default bridge name from the kvm-install-vm config."""
+    kivrc = os.path.expanduser('~/.kivrc')
+    try:
+        with open(kivrc, 'r') as f:
+            for line in f:
+                m = re.match(r'%s=(.*)' % name, line)
+                if m:
+                    return m.group(1).strip().replace('"','').replace("'",'')
+    except:
+        pass
+    return None
+
+def kvm_gateway():
+    """Lookup the address of the bridge device."""
+    bridge = kiv_value('BRIDGE') or 'virb0'
+    cmdline = 'ip -oneline address show dev %s' % bridge
+    pipe = os.popen(cmdline + ' 2>&1')
+    if pipe:
+        output = pipe.read()
+        pipe.close()
+        m = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', output)
+        if m:
+            return m.group(1)
+    return None
+
 DEFAULTS = {
     'autostart': True,
-    'bridge': None,
+    'bridge': kiv_value('BRIDGE') or 'virbr0',
     'cpus': None,
     'disksize': None,
     'distro': 'centos7',
     'domain': 'example.com',
     'feature': None,
-    'gateway': None,
+    'gateway': kvm_gateway(),
     'graphics': None,
     'guests': '3',
     'imagedir': None,
